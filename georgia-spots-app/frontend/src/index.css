@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Georgian:wght@500;600;700&family=Noto+Sans+Georgian:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Noto Serif Georgian", serif;
+  --font-body: "Noto Sans Georgian", sans-serif;
+
+  --color-bg: #EEEEDF;
+  --color-surface: #FFFFFE;
+  --color-ink: #23301D;
+  --color-ink-soft: #56604C;
+  --color-forest: #274438;
+  --color-forest-dark: #1B3027;
+  --color-moss: #6B8659;
+  --color-clay: #A8522E;
+  --color-clay-dark: #8A4225;
+  --color-gold: #BF9138;
+  --color-stone: #D9D4BE;
+  --color-stone-dark: #C3BC9E;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Leaflet marker + popup restyle to match palette */
+.leaflet-popup-content-wrapper {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(35, 48, 29, 0.18);
+}
+.leaflet-popup-tip {
+  background: var(--color-surface);
+}
+.leaflet-container {
+  font-family: var(--font-body);
+  background: #DCE3D3;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-forest-dark);
+}
+
+/* Mobile browsers resize their toolbar, so 100vh is taller than what's actually visible,
+   pushing content (like the map's satellite toggle button) below the fold until you scroll.
+   100dvh accounts for the real visible viewport; the plain vh rule is just a fallback for
+   older browsers that don't support dvh yet. */
+.app-shell-height {
+  height: calc(100vh - 57px);
+  height: calc(100dvh - 57px);
+}
+.contour-divider {
+  height: 18px;
+  background-image: repeating-radial-gradient(circle at 50% -20px, transparent 0, transparent 10px, var(--color-stone) 11px, transparent 12px);
+  background-size: 60px 24px;
+  opacity: 0.6;
+}
