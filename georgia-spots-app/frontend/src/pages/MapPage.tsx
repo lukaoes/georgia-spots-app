@@ -36,31 +36,33 @@ export function MapPage() {
 
   return (
     <div className="flex flex-col app-shell-height">
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-[color:var(--color-stone)] bg-[color:var(--color-surface)]">
+      <div className="flex flex-wrap items-center gap-2 gap-y-2 px-3 sm:px-4 py-2 border-b border-[color:var(--color-stone)] bg-[color:var(--color-surface)]">
         <button
           onClick={() => setShowFilters((s) => !s)}
-          className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border border-[color:var(--color-stone-dark)] hover:bg-[color:var(--color-bg)]"
+          className="flex items-center gap-1.5 text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border border-[color:var(--color-stone-dark)] hover:bg-[color:var(--color-bg)] shrink-0"
         >
           <Settings size={15} /> ფილტრები
         </button>
         <button
           onClick={locateMe}
-          className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border border-[color:var(--color-stone-dark)] hover:bg-[color:var(--color-bg)]"
+          aria-label="ჩემი მდებარეობა"
+          title="ჩემი მდებარეობა"
+          className="flex items-center gap-1.5 text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border border-[color:var(--color-stone-dark)] hover:bg-[color:var(--color-bg)] shrink-0"
         >
-          <Navigation size={15} /> ჩემი მდებარეობა
+          <Navigation size={15} /> <span className="hidden sm:inline">ჩემი მდებარეობა</span>
         </button>
-        <div className="ml-auto flex gap-1 bg-[color:var(--color-bg)] rounded-full p-1">
+        <div className="ml-auto flex gap-1 bg-[color:var(--color-bg)] rounded-full p-1 shrink-0">
           <button
             onClick={() => setView("map")}
-            className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full ${view === "map" ? "bg-[color:var(--color-forest)] text-white" : ""}`}
+            className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1 rounded-full whitespace-nowrap ${view === "map" ? "bg-[color:var(--color-forest)] text-white" : ""}`}
           >
             <MapIcon size={14} /> რუკა
           </button>
           <button
             onClick={() => setView("list")}
-            className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full ${view === "list" ? "bg-[color:var(--color-forest)] text-white" : ""}`}
+            className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1 rounded-full whitespace-nowrap ${view === "list" ? "bg-[color:var(--color-forest)] text-white" : ""}`}
           >
-            <ListIcon size={14} /> სია ({places.length})
+            <ListIcon size={14} /> სია <span className="tabular-nums">({places.length})</span>
           </button>
         </div>
       </div>
