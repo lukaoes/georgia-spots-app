@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
 import { pinIcon } from "../components/markerIcon";
+import { TILE_LAYERS, LayerToggle } from "../components/MapView";
 import {
   CATEGORIES,
   VEHICLE_TYPES,
@@ -36,6 +37,16 @@ function ClickToPlace({
   ) : null;
 }
 
+// Recenters the map when coordinates are typed in or "my location" is used. Not triggered by a
+// direct map click, since the user has already manually positioned the map there themselves.
+function FlyToPosition({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (position) map.flyTo(position, 13, { duration: 0.8 });
+  }, [position]);
+  return null;
+}
+
 export function AddPlacePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -49,6 +60,10 @@ export function AddPlacePage() {
   const [canEdit, setCanEdit] = useState(true);
 
   const [position, setPosition] = useState<[number, number] | null>(null);
+  const [latInput, setLatInput] = useState("");
+  const [lngInput, setLngInput] = useState("");
+  const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null);
+  const [layer, setLayer] = useState<"standard" | "satellite">("standard");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("wild_spot");
@@ -80,6 +95,8 @@ export function AddPlacePage() {
           return;
         }
         setPosition([p.lat, p.lng]);
+        setLatInput(String(p.lat));
+        setLngInput(String(p.lng));
         setName(p.name);
         setDescription(p.description || "");
         setCategory(p.category);
@@ -102,6 +119,22 @@ export function AddPlacePage() {
       })
       .finally(() => setLoadingExisting(false));
   }, [id, user]);
+
+  // Drop the pin from typed coordinates. Debounced so it doesn't fire on every keystroke while
+  // the numbers are still incomplete, and skipped if it already matches the current pin (e.g.
+  // right after a map click filled these same fields) so it doesn't re-fly the map pointlessly.
+  useEffect(() => {
+    const lat = parseFloat(latInput);
+    const lng = parseFloat(lngInput);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+    if (position && Math.abs(position[0] - lat) < 1e-9 && Math.abs(position[1] - lng) < 1e-9) return;
+    const t = setTimeout(() => {
+      setPosition([lat, lng]);
+      setFlyTarget([lat, lng]);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [latInput, lngInput]);
 
   if (!user) {
     return (
@@ -194,8 +227,18 @@ export function AddPlacePage() {
 
   function locateMe() {
     navigator.geolocation?.getCurrentPosition((pos) => {
-      setPosition([pos.coords.latitude, pos.coords.longitude]);
+      const p: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+      setPosition(p);
+      setLatInput(p[0].toFixed(6));
+      setLngInput(p[1].toFixed(6));
+      setFlyTarget(p);
     });
+  }
+
+  function handleMapClick(p: [number, number]) {
+    setPosition(p);
+    setLatInput(p[0].toFixed(6));
+    setLngInput(p[1].toFixed(6));
   }
 
   const isOwnerNotAdmin = isEdit && user && !user.is_admin;
@@ -214,6 +257,31 @@ export function AddPlacePage() {
       </p>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">განედი (lat)</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={latInput}
+              onChange={(e) => setLatInput(e.target.value)}
+              placeholder="42.15"
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">გრძედი (lng)</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={lngInput}
+              onChange={(e) => setLngInput(e.target.value)}
+              placeholder="43.50"
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            />
+          </label>
+        </div>
+
         <div className="rounded-xl overflow-hidden border border-[color:var(--color-stone)] h-72 relative">
           <MapContainer
             center={position || GEORGIA_CENTER}
@@ -221,18 +289,20 @@ export function AddPlacePage() {
             className="w-full h-full"
           >
             <TileLayer
-              attribution="&copy; OpenStreetMap contributors"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution={TILE_LAYERS[layer].attribution}
+              url={TILE_LAYERS[layer].url}
             />
-            <ClickToPlace position={position} onPick={setPosition} />
+            <ClickToPlace position={position} onPick={handleMapClick} />
+            <FlyToPosition position={flyTarget} />
           </MapContainer>
           <button
             type="button"
             onClick={locateMe}
-            className="absolute bottom-3 right-3 z-[1000] bg-white shadow-md rounded-full px-3 py-1.5 text-sm font-medium border border-[color:var(--color-stone-dark)] flex items-center gap-1.5"
+            className="absolute bottom-3 left-3 z-[1000] bg-white shadow-md rounded-full px-3 py-1.5 text-sm font-medium border border-[color:var(--color-stone-dark)] flex items-center gap-1.5"
           >
             <Navigation size={14} /> ჩემი მდებარეობა
           </button>
+          <LayerToggle layer={layer} setLayer={setLayer} />
         </div>
         {position && (
           <p className="text-xs text-[color:var(--color-ink-soft)] -mt-3">

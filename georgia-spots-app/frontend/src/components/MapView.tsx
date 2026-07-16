@@ -10,7 +10,7 @@ import { useAuthGate } from "../AuthGate";
 
 const GEORGIA_CENTER: [number, number] = [42.15, 43.5];
 
-const TILE_LAYERS = {
+export const TILE_LAYERS = {
   standard: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -45,7 +45,7 @@ function FlyTo({ position }: { position: [number, number] | null }) {
   return null;
 }
 
-function LayerToggle({ layer, setLayer }: { layer: "standard" | "satellite"; setLayer: (l: "standard" | "satellite") => void }) {
+export function LayerToggle({ layer, setLayer }: { layer: "standard" | "satellite"; setLayer: (l: "standard" | "satellite") => void }) {
   return (
     <button
       onClick={() => setLayer(layer === "standard" ? "satellite" : "standard")}
