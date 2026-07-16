@@ -77,45 +77,52 @@ function watermarkSvg(width: number, height: number) {
 router.post("/", requireAuth, upload.array("photos", 6), async (req, res) => {
   const files = (req.files as Express.Multer.File[]) || [];
   const isAvatar = req.body?.context === "avatar";
+
+  async function processFile(file: Express.Multer.File): Promise<string> {
+    const filename = `${uuid()}.webp`;
+    const { data: resized, info } = await sharp(file.buffer)
+      .rotate() // respect EXIF orientation
+      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+      .toBuffer({ resolveWithObject: true });
+
+    let out = sharp(resized);
+    if (!isAvatar) {
+      out = out.composite([{ input: watermarkSvg(info.width, info.height), gravity: "southeast" }]);
+    }
+
+    const buffer = await out.webp({ quality: 78 }).toBuffer();
+
+    if (R2_ENABLED && s3) {
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: filename,
+          Body: buffer,
+          ContentType: "image/webp",
+        })
+      );
+      return `${process.env.R2_PUBLIC_URL}/${filename}`;
+    } else {
+      const fs = await import("fs/promises");
+      await fs.writeFile(path.join(uploadsDir, filename), buffer);
+      return `/uploads/${filename}`;
+    }
+  }
+
   try {
-    // Photos were previously processed one at a time in a loop, so 6 photos meant 6 sequential
-    // rounds of sharp processing + an R2 network round-trip - easily 15-20+ seconds total, long
-    // enough to run into a hosting platform's own proxy timeout (which then kills the connection
-    // and shows up client-side as a generic network failure, not a real error message). Doing
-    // them concurrently cuts total wall-clock time roughly to the slowest single photo instead
-    // of the sum of all of them.
-    const urls = await Promise.all(
-      files.map(async (file) => {
-        const filename = `${uuid()}.webp`;
-        const { data: resized, info } = await sharp(file.buffer)
-          .rotate() // respect EXIF orientation
-          .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
-          .toBuffer({ resolveWithObject: true });
-
-        let out = sharp(resized);
-        if (!isAvatar) {
-          out = out.composite([{ input: watermarkSvg(info.width, info.height), gravity: "southeast" }]);
-        }
-
-        const buffer = await out.webp({ quality: 78 }).toBuffer();
-
-        if (R2_ENABLED && s3) {
-          await s3.send(
-            new PutObjectCommand({
-              Bucket: process.env.R2_BUCKET_NAME,
-              Key: filename,
-              Body: buffer,
-              ContentType: "image/webp",
-            })
-          );
-          return `${process.env.R2_PUBLIC_URL}/${filename}`;
-        } else {
-          const fs = await import("fs/promises");
-          await fs.writeFile(path.join(uploadsDir, filename), buffer);
-          return `/uploads/${filename}`;
-        }
-      })
-    );
+    // Fully parallel (Promise.all over every file at once) was too aggressive for a small,
+    // memory/CPU-constrained free-tier container: several concurrent sharp operations plus
+    // several concurrent R2 uploads can spike past the container's limits, and the container
+    // (or the platform's proxy in front of it) drops the connection - which shows up client-side
+    // as a generic network failure. Processing in small batches keeps a real speed benefit over
+    // doing them fully one-by-one, while keeping peak concurrent memory/CPU use bounded.
+    const CONCURRENCY = 2;
+    const urls: string[] = [];
+    for (let i = 0; i < files.length; i += CONCURRENCY) {
+      const batch = files.slice(i, i + CONCURRENCY);
+      const batchUrls = await Promise.all(batch.map(processFile));
+      urls.push(...batchUrls);
+    }
     res.status(201).json({ urls });
   } catch (err: any) {
     res.status(400).json({ error: err.message || "სურათის დამუშავება ვერ მოხერხდა" });
