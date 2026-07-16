@@ -4,6 +4,7 @@ import path from "path";
 import sharp from "sharp";
 import { v4 as uuid } from "uuid";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -38,6 +39,12 @@ const s3 = R2_ENABLED
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
+      // Without an explicit timeout, a slow or unreachable R2 endpoint can hang well past
+      // whatever timeout the hosting platform's own proxy enforces - the request then dies
+      // at the proxy layer with a generic network error client-side ("Load failed" in Safari)
+      // instead of a clear message. Failing fast here means the app always controls the error.
+      requestHandler: new NodeHttpHandler({ connectionTimeout: 5000, socketTimeout: 15000 }),
+      maxAttempts: 2,
     })
   : null;
 
@@ -71,37 +78,44 @@ router.post("/", requireAuth, upload.array("photos", 6), async (req, res) => {
   const files = (req.files as Express.Multer.File[]) || [];
   const isAvatar = req.body?.context === "avatar";
   try {
-    const urls: string[] = [];
-    for (const file of files) {
-      const filename = `${uuid()}.webp`;
-      const { data: resized, info } = await sharp(file.buffer)
-        .rotate() // respect EXIF orientation
-        .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
-        .toBuffer({ resolveWithObject: true });
+    // Photos were previously processed one at a time in a loop, so 6 photos meant 6 sequential
+    // rounds of sharp processing + an R2 network round-trip - easily 15-20+ seconds total, long
+    // enough to run into a hosting platform's own proxy timeout (which then kills the connection
+    // and shows up client-side as a generic network failure, not a real error message). Doing
+    // them concurrently cuts total wall-clock time roughly to the slowest single photo instead
+    // of the sum of all of them.
+    const urls = await Promise.all(
+      files.map(async (file) => {
+        const filename = `${uuid()}.webp`;
+        const { data: resized, info } = await sharp(file.buffer)
+          .rotate() // respect EXIF orientation
+          .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+          .toBuffer({ resolveWithObject: true });
 
-      let out = sharp(resized);
-      if (!isAvatar) {
-        out = out.composite([{ input: watermarkSvg(info.width, info.height), gravity: "southeast" }]);
-      }
+        let out = sharp(resized);
+        if (!isAvatar) {
+          out = out.composite([{ input: watermarkSvg(info.width, info.height), gravity: "southeast" }]);
+        }
 
-      const buffer = await out.webp({ quality: 78 }).toBuffer();
+        const buffer = await out.webp({ quality: 78 }).toBuffer();
 
-      if (R2_ENABLED && s3) {
-        await s3.send(
-          new PutObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME,
-            Key: filename,
-            Body: buffer,
-            ContentType: "image/webp",
-          })
-        );
-        urls.push(`${process.env.R2_PUBLIC_URL}/${filename}`);
-      } else {
-        const fs = await import("fs/promises");
-        await fs.writeFile(path.join(uploadsDir, filename), buffer);
-        urls.push(`/uploads/${filename}`);
-      }
-    }
+        if (R2_ENABLED && s3) {
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: process.env.R2_BUCKET_NAME,
+              Key: filename,
+              Body: buffer,
+              ContentType: "image/webp",
+            })
+          );
+          return `${process.env.R2_PUBLIC_URL}/${filename}`;
+        } else {
+          const fs = await import("fs/promises");
+          await fs.writeFile(path.join(uploadsDir, filename), buffer);
+          return `/uploads/${filename}`;
+        }
+      })
+    );
     res.status(201).json({ urls });
   } catch (err: any) {
     res.status(400).json({ error: err.message || "სურათის დამუშავება ვერ მოხერხდა" });
