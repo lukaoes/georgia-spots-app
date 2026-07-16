@@ -48,19 +48,34 @@ export function PlaceDetailPage() {
   const [busy, setBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
-  const [status, setStatus] = useState<{ is_favorite: boolean; is_visited: boolean; visited_date: string | null } | null>(null);
+  const [status, setStatus] = useState<{
+    is_favorite: boolean;
+    is_visited: boolean;
+    visited_date: string | null;
+  } | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
 
   function load() {
     if (!id || !user) return;
-    api.getPlace(id).then(setData).catch((e) => setError(e.message));
-    api.myStatusFor(id).then(setStatus).catch(() => {});
+    api
+      .getPlace(id)
+      .then(setData)
+      .catch((e) => setError(e.message));
+    api
+      .myStatusFor(id)
+      .then(setStatus)
+      .catch(() => {});
   }
 
   useEffect(load, [id, user]);
 
   const allPhotoUrls: string[] = data
-    ? [...data.photos.map((p: any) => p.url), ...data.reviews.flatMap((r: any) => (r.photos || []).map((p: any) => p.url))]
+    ? [
+        ...data.photos.map((p: any) => p.url),
+        ...data.reviews.flatMap((r: any) =>
+          (r.photos || []).map((p: any) => p.url),
+        ),
+      ]
     : [];
   const lightbox = useLightbox(allPhotoUrls);
 
@@ -70,15 +85,23 @@ export function PlaceDetailPage() {
         <div className="w-14 h-14 rounded-full bg-[color:var(--color-surface)] border border-[color:var(--color-stone)] flex items-center justify-center mx-auto mb-4 text-[color:var(--color-forest)]">
           <Lock size={24} />
         </div>
-        <h1 className="font-display text-xl font-semibold text-[color:var(--color-forest)] mb-2">ამ ადგილის დეტალები</h1>
+        <h1 className="font-display text-xl font-semibold text-[color:var(--color-forest)] mb-2">
+          ამ ადგილის დეტალები
+        </h1>
         <p className="text-sm text-[color:var(--color-ink-soft)] mb-5">
-          დეტალების, ფოტოებისა და შეფასებების სანახავად საჭიროა უფასო ანგარიშის შექმნა.
+          დეტალების, ფოტოებისა და შეფასებების სანახავად საჭიროა რეგისტრაცია.
         </p>
         <div className="flex gap-2 justify-center">
-          <Link to="/register" className="bg-[color:var(--color-forest)] text-white rounded-lg px-5 py-2.5 text-sm font-medium">
+          <Link
+            to="/register"
+            className="bg-[color:var(--color-forest)] text-white rounded-lg px-5 py-2.5 text-sm font-medium"
+          >
             რეგისტრაცია
           </Link>
-          <Link to="/login" className="border border-[color:var(--color-stone-dark)] rounded-lg px-5 py-2.5 text-sm font-medium">
+          <Link
+            to="/login"
+            className="border border-[color:var(--color-stone-dark)] rounded-lg px-5 py-2.5 text-sm font-medium"
+          >
             შესვლა
           </Link>
         </div>
@@ -86,8 +109,18 @@ export function PlaceDetailPage() {
     );
   }
 
-  if (error) return <p className="text-center mt-16 text-[color:var(--color-clay)]">{error}</p>;
-  if (!data) return <p className="text-center mt-16 text-[color:var(--color-ink-soft)]">იტვირთება...</p>;
+  if (error)
+    return (
+      <p className="text-center mt-16 text-[color:var(--color-clay)]">
+        {error}
+      </p>
+    );
+  if (!data)
+    return (
+      <p className="text-center mt-16 text-[color:var(--color-ink-soft)]">
+        იტვირთება...
+      </p>
+    );
 
   const { place, photos, reviews } = data;
   const isOwner = user && user.id === place.owner_id;
@@ -105,7 +138,12 @@ export function PlaceDetailPage() {
         const up = await api.uploadPhotos(reviewPhotos, "review");
         photo_urls = up.urls;
       }
-      await api.addReview(id, { rating, text: reviewText, visited_date: visitedDate || null, photo_urls });
+      await api.addReview(id, {
+        rating,
+        text: reviewText,
+        visited_date: visitedDate || null,
+        photo_urls,
+      });
       setReviewText("");
       setVisitedDate("");
       setRating(5);
@@ -124,7 +162,9 @@ export function PlaceDetailPage() {
       await api.reportPlace(id, reportReason);
       setReportOpen(false);
       setReportReason("");
-      alert("გმადლობთ, თქვენი შეტყობინება გადაეგზავნა მოდერატორებს განსახილველად.");
+      alert(
+        "გმადლობთ, თქვენი შეტყობინება გადაეგზავნა მოდერატორებს განსახილველად.",
+      );
     } catch (err: any) {
       alert(err.message);
     }
@@ -177,15 +217,22 @@ export function PlaceDetailPage() {
     ["სიმშვიდე", labelFrom(QUIETNESS, place.quietness)],
     ["რელიეფი", labelFrom(GROUND_LEVELS, place.ground_level)],
     ["ღიაა მთელი წელი", place.open_all_year ? "დიახ" : "არა"],
-    ["შინაური ცხოველები", place.pets_allowed ? "დაშვებულია" : "არ არის დაშვებული"],
+    [
+      "შინაური ცხოველები",
+      place.pets_allowed ? "დაშვებულია" : "არ არის დაშვებული",
+    ],
     ["ჩრდილი", place.shade ? "არის" : "არ არის"],
   ];
-  if (place.capacity_estimate) attrRows.push(["ტევადობა", `${place.capacity_estimate} მანქანა`]);
+  if (place.capacity_estimate)
+    attrRows.push(["ტევადობა", `${place.capacity_estimate} მანქანა`]);
   if (place.region) attrRows.push(["რეგიონი", regionLabel(place.region)]);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
-      <Link to="/" className="text-sm text-[color:var(--color-clay)] underline mb-3 inline-block">
+      <Link
+        to="/"
+        className="text-sm text-[color:var(--color-clay)] underline mb-3 inline-block"
+      >
         ← უკან რუკაზე
       </Link>
 
@@ -197,14 +244,22 @@ export function PlaceDetailPage() {
               : "bg-[#F3DBD3] text-[color:var(--color-clay-dark)]"
           }`}
         >
-          {place.status === "rejected" ? <CircleX size={16} className="shrink-0 mt-0.5" /> : <Clock size={16} className="shrink-0 mt-0.5" />}
+          {place.status === "rejected" ? (
+            <CircleX size={16} className="shrink-0 mt-0.5" />
+          ) : (
+            <Clock size={16} className="shrink-0 mt-0.5" />
+          )}
           <span>
-            {place.status === "pending" && "ეს ადგილი ელოდება ადმინისტრატორის დამტკიცებას — ჯერჯერობით მხოლოდ თქვენ ხედავთ მას."}
-            {place.status === "pending_deletion" && "თქვენ მოითხოვეთ ამ ადგილის წაშლა — ის მოხსნილია საჯარო რუკიდან და ელოდება ადმინისტრატორის დადასტურებას."}
+            {place.status === "pending" &&
+              "ეს ადგილი ელოდება ადმინისტრატორის დამტკიცებას — ჯერჯერობით მხოლოდ თქვენ ხედავთ მას."}
+            {place.status === "pending_deletion" &&
+              "თქვენ მოითხოვეთ ამ ადგილის წაშლა — ის მოხსნილია საჯარო რუკიდან და ელოდება ადმინისტრატორის დადასტურებას."}
             {place.status === "rejected" && (
               <>
                 ეს ადგილი უარყოფილია მოდერატორის მიერ.
-                {place.rejection_reason ? ` მიზეზი: ${place.rejection_reason}` : ""}
+                {place.rejection_reason
+                  ? ` მიზეზი: ${place.rejection_reason}`
+                  : ""}
               </>
             )}
           </span>
@@ -235,14 +290,20 @@ export function PlaceDetailPage() {
           </div>
         )}
       </div>
-      <p className="text-sm text-[color:var(--color-ink-soft)] mb-1">{categoryLabel(place.category)}</p>
+      <p className="text-sm text-[color:var(--color-ink-soft)] mb-1">
+        {categoryLabel(place.category)}
+      </p>
       {place.owner_name && (
         <Link
           to={`/users/${place.owner_username}`}
           className="text-sm text-[color:var(--color-clay)] hover:underline inline-flex items-center gap-1.5 mb-4"
         >
           {place.owner_avatar ? (
-            <img src={place.owner_avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+            <img
+              src={place.owner_avatar}
+              alt=""
+              className="w-5 h-5 rounded-full object-cover"
+            />
           ) : (
             <CircleUser size={16} />
           )}
@@ -261,7 +322,11 @@ export function PlaceDetailPage() {
                 : "border-[color:var(--color-stone-dark)]"
             }`}
           >
-            <Heart size={14} fill={status?.is_favorite ? "currentColor" : "none"} /> სასურველებში
+            <Heart
+              size={14}
+              fill={status?.is_favorite ? "currentColor" : "none"}
+            />{" "}
+            სასურველებში
           </button>
           <button
             onClick={toggleVisited}
@@ -280,28 +345,50 @@ export function PlaceDetailPage() {
       {photos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto mb-4 -mx-1 px-1">
           {photos.map((p: any, i: number) => (
-            <button key={p.id} onClick={() => lightbox.open(i)} className="shrink-0">
-              <img src={p.url} alt={place.name} className="h-48 rounded-lg object-cover cursor-zoom-in hover:opacity-90 transition-opacity" />
+            <button
+              key={p.id}
+              onClick={() => lightbox.open(i)}
+              className="shrink-0"
+            >
+              <img
+                src={p.url}
+                alt={place.name}
+                className="h-48 rounded-lg object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+              />
             </button>
           ))}
         </div>
       )}
       {lightbox.node}
 
-      {place.description && <p className="mb-4 leading-relaxed">{place.description}</p>}
+      {place.description && (
+        <p className="mb-4 leading-relaxed">{place.description}</p>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4 bg-[color:var(--color-surface)] border border-[color:var(--color-stone)] rounded-xl p-4">
         <div className="flex justify-between sm:col-span-2 font-medium">
-          <span>{place.is_free ? "უფასო" : `${place.price_amount ?? "?"} ₾`}</span>
+          <span>
+            {place.is_free ? "უფასო" : `${place.price_amount ?? "?"} ₾`}
+          </span>
           {reviews.length > 0 && (
             <span className="flex items-center gap-1">
-              <StarRating value={reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length} />
-              <span className="text-[color:var(--color-ink-soft)]">({reviews.length})</span>
+              <StarRating
+                value={
+                  reviews.reduce((s: number, r: any) => s + r.rating, 0) /
+                  reviews.length
+                }
+              />
+              <span className="text-[color:var(--color-ink-soft)]">
+                ({reviews.length})
+              </span>
             </span>
           )}
         </div>
         {attrRows.map(([k, v]) => (
-          <div key={k} className="flex justify-between border-t border-[color:var(--color-stone)] pt-1">
+          <div
+            key={k}
+            className="flex justify-between border-t border-[color:var(--color-stone)] pt-1"
+          >
             <span className="text-[color:var(--color-ink-soft)]">{k}</span>
             <span>{v}</span>
           </div>
@@ -310,16 +397,29 @@ export function PlaceDetailPage() {
 
       <div className="flex flex-wrap gap-2 mb-6">
         {SERVICES.filter((s) => place[s.key]).map((s) => (
-          <span key={s.key} className="text-xs bg-[color:var(--color-moss)] text-white px-3 py-1 rounded-full flex items-center gap-1.5">
+          <span
+            key={s.key}
+            className="text-xs bg-[color:var(--color-moss)] text-white px-3 py-1 rounded-full flex items-center gap-1.5"
+          >
             <ServiceIcon service={s.key} size={12} /> {s.label}
           </span>
         ))}
       </div>
 
       <div className="rounded-xl overflow-hidden border border-[color:var(--color-stone)] h-56 mb-2">
-        <MapContainer center={[place.lat, place.lng]} zoom={13} className="w-full h-full">
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-          <Marker position={[place.lat, place.lng]} icon={pinIcon(place.category)} />
+        <MapContainer
+          center={[place.lat, place.lng]}
+          zoom={13}
+          className="w-full h-full"
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution="&copy; OpenStreetMap"
+          />
+          <Marker
+            position={[place.lat, place.lng]}
+            icon={pinIcon(place.category)}
+          />
         </MapContainer>
       </div>
       <div className="flex items-center justify-between mb-6 text-xs text-[color:var(--color-ink-soft)]">
@@ -341,7 +441,10 @@ export function PlaceDetailPage() {
       </h2>
 
       {user ? (
-        <form onSubmit={submitReview} className="flex flex-col gap-3 mb-6 bg-[color:var(--color-surface)] border border-[color:var(--color-stone)] rounded-xl p-4">
+        <form
+          onSubmit={submitReview}
+          className="flex flex-col gap-3 mb-6 bg-[color:var(--color-surface)] border border-[color:var(--color-stone)] rounded-xl p-4"
+        >
           <StarRatingInput value={rating} onChange={setRating} />
           <textarea
             value={reviewText}
@@ -352,7 +455,9 @@ export function PlaceDetailPage() {
           />
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 text-sm">
-              <span className="text-[color:var(--color-ink-soft)]">ვიზიტის თარიღი</span>
+              <span className="text-[color:var(--color-ink-soft)]">
+                ვიზიტის თარიღი
+              </span>
               <input
                 type="date"
                 value={visitedDate}
@@ -361,12 +466,16 @@ export function PlaceDetailPage() {
               />
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <span className="text-[color:var(--color-ink-soft)]">ფოტოები</span>
+              <span className="text-[color:var(--color-ink-soft)]">
+                ფოტოები
+              </span>
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={(e) => setReviewPhotos(Array.from(e.target.files || []).slice(0, 6))}
+                onChange={(e) =>
+                  setReviewPhotos(Array.from(e.target.files || []).slice(0, 6))
+                }
                 className="text-xs"
               />
             </label>
@@ -380,7 +489,10 @@ export function PlaceDetailPage() {
         </form>
       ) : (
         <p className="text-sm text-[color:var(--color-ink-soft)] mb-6">
-          <Link to="/login" className="text-[color:var(--color-clay)] underline">
+          <Link
+            to="/login"
+            className="text-[color:var(--color-clay)] underline"
+          >
             შედით სისტემაში
           </Link>{" "}
           შეფასების დასატოვებლად.
@@ -391,14 +503,26 @@ export function PlaceDetailPage() {
         {reviews.map((r: any, reviewIdx: number) => {
           const photosBefore =
             photos.length +
-            reviews.slice(0, reviewIdx).reduce((sum: number, rv: any) => sum + (rv.photos?.length || 0), 0);
+            reviews
+              .slice(0, reviewIdx)
+              .reduce(
+                (sum: number, rv: any) => sum + (rv.photos?.length || 0),
+                0,
+              );
           return (
-            <div key={r.id} className="border-b border-[color:var(--color-stone)] pb-3">
+            <div
+              key={r.id}
+              className="border-b border-[color:var(--color-stone)] pb-3"
+            >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-sm">{r.author_name}</span>
                 <StarRating value={r.rating} size={13} />
               </div>
-              {r.text && <p className="text-sm text-[color:var(--color-ink-soft)]">{r.text}</p>}
+              {r.text && (
+                <p className="text-sm text-[color:var(--color-ink-soft)]">
+                  {r.text}
+                </p>
+              )}
               {r.photos && r.photos.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto mt-2">
                   {r.photos.map((p: any, photoIdx: number) => (
@@ -413,13 +537,17 @@ export function PlaceDetailPage() {
                 </div>
               )}
               {r.visited_date && (
-                <p className="text-xs text-[color:var(--color-ink-soft)] mt-1">ეწვია: {r.visited_date}</p>
+                <p className="text-xs text-[color:var(--color-ink-soft)] mt-1">
+                  ეწვია: {r.visited_date}
+                </p>
               )}
             </div>
           );
         })}
         {reviews.length === 0 && (
-          <p className="text-sm text-[color:var(--color-ink-soft)]">ჯერ არავის დაუტოვებია შეფასება.</p>
+          <p className="text-sm text-[color:var(--color-ink-soft)]">
+            ჯერ არავის დაუტოვებია შეფასება.
+          </p>
         )}
       </div>
 
@@ -434,17 +562,27 @@ export function PlaceDetailPage() {
                 className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-1.5 text-sm w-72"
               />
               <div className="flex gap-2">
-                <button onClick={() => setReportOpen(false)} className="text-sm text-[color:var(--color-ink-soft)]">
+                <button
+                  onClick={() => setReportOpen(false)}
+                  className="text-sm text-[color:var(--color-ink-soft)]"
+                >
                   გაუქმება
                 </button>
-                <button onClick={submitReport} className="text-sm text-white bg-[color:var(--color-clay)] px-3 py-1.5 rounded-lg">
+                <button
+                  onClick={submitReport}
+                  className="text-sm text-white bg-[color:var(--color-clay)] px-3 py-1.5 rounded-lg"
+                >
                   გაგზავნა
                 </button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setReportOpen(true)} className="text-xs text-[color:var(--color-ink-soft)] underline flex items-center gap-1 ml-auto">
-              <Flag size={12} /> შეტყობინება პრობლემის შესახებ — გადაეგზავნება მოდერატორებს
+            <button
+              onClick={() => setReportOpen(true)}
+              className="text-xs text-[color:var(--color-ink-soft)] underline flex items-center gap-1 ml-auto"
+            >
+              <Flag size={12} /> შეტყობინება პრობლემის შესახებ — გადაეგზავნება
+              მოდერატორებს
             </button>
           )}
         </div>

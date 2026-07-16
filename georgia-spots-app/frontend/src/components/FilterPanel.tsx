@@ -39,7 +39,9 @@ function Select({
 }) {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="text-[color:var(--color-ink-soft)] font-medium">{label}</span>
+      <span className="text-[color:var(--color-ink-soft)] font-medium">
+        {label}
+      </span>
       <select
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
@@ -77,19 +79,36 @@ export function FilterPanel({
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg font-semibold text-[color:var(--color-forest)]">ფილტრები</h2>
+        <h2 className="font-display text-lg font-semibold text-[color:var(--color-forest)]">
+          ფილტრები
+        </h2>
         {activeCount > 0 && (
-          <button onClick={onReset} className="text-xs text-[color:var(--color-clay)] underline">
+          <button
+            onClick={onReset}
+            className="text-xs text-[color:var(--color-clay)] underline"
+          >
             გასუფთავება ({activeCount})
           </button>
         )}
       </div>
 
-      <Select label="კატეგორია" value={filters.category} onChange={(v) => set("category", v)} options={CATEGORIES} />
-      <Select label="რეგიონი" value={filters.region} onChange={(v) => set("region", v)} options={REGIONS} />
+      <Select
+        label="კატეგორია"
+        value={filters.category}
+        onChange={(v) => set("category", v)}
+        options={CATEGORIES}
+      />
+      <Select
+        label="რეგიონი"
+        value={filters.region}
+        onChange={(v) => set("region", v)}
+        options={REGIONS}
+      />
 
       <div className="flex flex-col gap-1 text-sm">
-        <span className="text-[color:var(--color-ink-soft)] font-medium">ფასი</span>
+        <span className="text-[color:var(--color-ink-soft)] font-medium">
+          ფასი
+        </span>
         <div className="flex gap-2">
           {[
             { v: "true", l: "უფასო" },
@@ -110,18 +129,55 @@ export function FilterPanel({
         </div>
       </div>
 
-      <Select label="ტრანსპორტი" value={filters.vehicle_type} onChange={(v) => set("vehicle_type", v)} options={VEHICLE_TYPES} />
-      <Select label="გზის სირთულე" value={filters.road_difficulty} onChange={(v) => set("road_difficulty", v)} options={ROAD_DIFFICULTY} />
-      <Select label="საფარი" value={filters.surface} onChange={(v) => set("surface", v)} options={SURFACES} />
-      <Select label="გარემო" value={filters.environment} onChange={(v) => set("environment", v)} options={ENVIRONMENTS} />
-      <Select label="სიმშვიდე" value={filters.quietness} onChange={(v) => set("quietness", v)} options={QUIETNESS} />
-      <Select label="რელიეფი" value={filters.ground_level} onChange={(v) => set("ground_level", v)} options={GROUND_LEVELS} />
+      <Select
+        label="ტრანსპორტი"
+        value={filters.vehicle_type}
+        onChange={(v) => set("vehicle_type", v)}
+        options={VEHICLE_TYPES}
+      />
+      <Select
+        label="გზის სირთულე"
+        value={filters.road_difficulty}
+        onChange={(v) => set("road_difficulty", v)}
+        options={ROAD_DIFFICULTY}
+      />
+      <Select
+        label="საფარი"
+        value={filters.surface}
+        onChange={(v) => set("surface", v)}
+        options={SURFACES}
+      />
+      <Select
+        label="გარემო"
+        value={filters.environment}
+        onChange={(v) => set("environment", v)}
+        options={ENVIRONMENTS}
+      />
+      <Select
+        label="სიმშვიდე"
+        value={filters.quietness}
+        onChange={(v) => set("quietness", v)}
+        options={QUIETNESS}
+      />
+      <Select
+        label="რელიეფი"
+        value={filters.ground_level}
+        onChange={(v) => set("ground_level", v)}
+        options={GROUND_LEVELS}
+      />
 
       <div className="flex flex-col gap-1 text-sm">
-        <span className="text-[color:var(--color-ink-soft)] font-medium">დამატებით</span>
+        <span className="text-[color:var(--color-ink-soft)] font-medium">
+          დამატებით
+        </span>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => set("open_all_year", filters.open_all_year === "true" ? "" : "true")}
+            onClick={() =>
+              set(
+                "open_all_year",
+                filters.open_all_year === "true" ? "" : "true",
+              )
+            }
             className={`px-3 py-1.5 rounded-full text-sm border ${
               filters.open_all_year === "true"
                 ? "bg-[color:var(--color-forest)] text-white border-[color:var(--color-forest)]"
@@ -131,7 +187,9 @@ export function FilterPanel({
             მთელი წლის განმავლობაში
           </button>
           <button
-            onClick={() => set("pets_allowed", filters.pets_allowed === "true" ? "" : "true")}
+            onClick={() =>
+              set("pets_allowed", filters.pets_allowed === "true" ? "" : "true")
+            }
             className={`px-3 py-1.5 rounded-full text-sm border ${
               filters.pets_allowed === "true"
                 ? "bg-[color:var(--color-forest)] text-white border-[color:var(--color-forest)]"
@@ -154,7 +212,9 @@ export function FilterPanel({
       </div>
 
       <div className="flex flex-col gap-1 text-sm">
-        <span className="text-[color:var(--color-ink-soft)] font-medium">სერვისები</span>
+        <span className="text-[color:var(--color-ink-soft)] font-medium">
+          სერვისები
+        </span>
         <div className="flex flex-wrap gap-2">
           {SERVICES.map((s) => (
             <button

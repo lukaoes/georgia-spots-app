@@ -19,13 +19,21 @@ import { ServiceIcon, Navigation, X } from "../icons";
 
 const GEORGIA_CENTER: [number, number] = [42.15, 43.5];
 
-function ClickToPlace({ position, onPick }: { position: [number, number] | null; onPick: (p: [number, number]) => void }) {
+function ClickToPlace({
+  position,
+  onPick,
+}: {
+  position: [number, number] | null;
+  onPick: (p: [number, number]) => void;
+}) {
   useMapEvents({
     click(e) {
       onPick([e.latlng.lat, e.latlng.lng]);
     },
   });
-  return position ? <Marker position={position} icon={pinIcon("other", true)} /> : null;
+  return position ? (
+    <Marker position={position} icon={pinIcon("other", true)} />
+  ) : null;
 }
 
 export function AddPlacePage() {
@@ -35,7 +43,9 @@ export function AddPlacePage() {
   const isEdit = !!id;
 
   const [loadingExisting, setLoadingExisting] = useState(isEdit);
-  const [existingPhotos, setExistingPhotos] = useState<{ id: string; url: string }[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<
+    { id: string; url: string }[]
+  >([]);
   const [canEdit, setCanEdit] = useState(true);
 
   const [position, setPosition] = useState<[number, number] | null>(null);
@@ -76,7 +86,7 @@ export function AddPlacePage() {
         setIsFree(p.is_free);
         setPrice(p.price_amount ? String(p.price_amount) : "");
         setServices(
-          Object.fromEntries(SERVICES.map((s) => [s.key, !!p[s.key]]))
+          Object.fromEntries(SERVICES.map((s) => [s.key, !!p[s.key]])),
         );
         setVehicleType(p.vehicle_type);
         setRoadDifficulty(p.road_difficulty);
@@ -104,13 +114,19 @@ export function AddPlacePage() {
   }
 
   if (loadingExisting) {
-    return <p className="text-center mt-16 text-[color:var(--color-ink-soft)]">იტვირთება...</p>;
+    return (
+      <p className="text-center mt-16 text-[color:var(--color-ink-soft)]">
+        იტვირთება...
+      </p>
+    );
   }
 
   if (isEdit && !canEdit) {
     return (
       <div className="max-w-md mx-auto mt-16 px-4 text-center">
-        <p className="text-[color:var(--color-ink-soft)]">ამ ადგილის რედაქტირება მხოლოდ ავტორს ან ადმინისტრატორს შეუძლია.</p>
+        <p className="text-[color:var(--color-ink-soft)]">
+          ამ ადგილის რედაქტირება მხოლოდ ავტორს ან ადმინისტრატორს შეუძლია.
+        </p>
       </div>
     );
   }
@@ -199,9 +215,13 @@ export function AddPlacePage() {
 
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
         <div className="rounded-xl overflow-hidden border border-[color:var(--color-stone)] h-72 relative">
-          <MapContainer center={position || GEORGIA_CENTER} zoom={position ? 12 : 7} className="w-full h-full">
+          <MapContainer
+            center={position || GEORGIA_CENTER}
+            zoom={position ? 12 : 7}
+            className="w-full h-full"
+          >
             <TileLayer
-              attribution='&copy; OpenStreetMap contributors'
+              attribution="&copy; OpenStreetMap contributors"
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <ClickToPlace position={position} onPick={setPosition} />
@@ -216,7 +236,8 @@ export function AddPlacePage() {
         </div>
         {position && (
           <p className="text-xs text-[color:var(--color-ink-soft)] -mt-3">
-            მონიშნული კოორდინატები: {position[0].toFixed(5)}, {position[1].toFixed(5)}
+            მონიშნული კოორდინატები: {position[0].toFixed(5)},{" "}
+            {position[1].toFixed(5)}
           </p>
         )}
 
@@ -245,7 +266,11 @@ export function AddPlacePage() {
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">კატეგორია</span>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            >
               {CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
@@ -256,9 +281,15 @@ export function AddPlacePage() {
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">გარემო</span>
-            <select value={environment} onChange={(e) => setEnvironment(e.target.value)} className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2">
+            <select
+              value={environment}
+              onChange={(e) => setEnvironment(e.target.value)}
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            >
               {ENVIRONMENTS.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </label>
@@ -267,10 +298,20 @@ export function AddPlacePage() {
             <span className="font-medium">ფასი</span>
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-1">
-                <input type="radio" checked={isFree} onChange={() => setIsFree(true)} /> უფასო
+                <input
+                  type="radio"
+                  checked={isFree}
+                  onChange={() => setIsFree(true)}
+                />{" "}
+                უფასო
               </label>
               <label className="flex items-center gap-1">
-                <input type="radio" checked={!isFree} onChange={() => setIsFree(false)} /> ფასიანი
+                <input
+                  type="radio"
+                  checked={!isFree}
+                  onChange={() => setIsFree(false)}
+                />{" "}
+                ფასიანი
               </label>
               {!isFree && (
                 <input
@@ -298,45 +339,75 @@ export function AddPlacePage() {
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">შესაფერისი ტრანსპორტი</span>
-            <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2">
+            <select
+              value={vehicleType}
+              onChange={(e) => setVehicleType(e.target.value)}
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            >
               {VEHICLE_TYPES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">გზის სირთულე</span>
-            <select value={roadDifficulty} onChange={(e) => setRoadDifficulty(e.target.value)} className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2">
+            <select
+              value={roadDifficulty}
+              onChange={(e) => setRoadDifficulty(e.target.value)}
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            >
               {ROAD_DIFFICULTY.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">საფარი</span>
-            <select value={surface} onChange={(e) => setSurface(e.target.value)} className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2">
+            <select
+              value={surface}
+              onChange={(e) => setSurface(e.target.value)}
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            >
               {SURFACES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">რელიეფი</span>
-            <select value={groundLevel} onChange={(e) => setGroundLevel(e.target.value)} className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2">
+            <select
+              value={groundLevel}
+              onChange={(e) => setGroundLevel(e.target.value)}
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            >
               {GROUND_LEVELS.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">სიმშვიდე</span>
-            <select value={quietness} onChange={(e) => setQuietness(e.target.value)} className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2">
+            <select
+              value={quietness}
+              onChange={(e) => setQuietness(e.target.value)}
+              className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
+            >
               {QUIETNESS.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </label>
@@ -344,15 +415,27 @@ export function AddPlacePage() {
 
         <div className="flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={openAllYear} onChange={(e) => setOpenAllYear(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={openAllYear}
+              onChange={(e) => setOpenAllYear(e.target.checked)}
+            />
             ღიაა მთელი წლის განმავლობაში
           </label>
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={petsAllowed} onChange={(e) => setPetsAllowed(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={petsAllowed}
+              onChange={(e) => setPetsAllowed(e.target.checked)}
+            />
             შინაური ცხოველები დაშვებულია
           </label>
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={shade} onChange={(e) => setShade(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={shade}
+              onChange={(e) => setShade(e.target.checked)}
+            />
             ჩრდილიანია
           </label>
         </div>
@@ -364,7 +447,9 @@ export function AddPlacePage() {
               <button
                 type="button"
                 key={s.key}
-                onClick={() => setServices((prev) => ({ ...prev, [s.key]: !prev[s.key] }))}
+                onClick={() =>
+                  setServices((prev) => ({ ...prev, [s.key]: !prev[s.key] }))
+                }
                 className={`px-3 py-1.5 rounded-full text-sm border flex items-center gap-1.5 ${
                   services[s.key]
                     ? "bg-[color:var(--color-moss)] text-white border-[color:var(--color-moss)]"
@@ -383,7 +468,11 @@ export function AddPlacePage() {
             <div className="flex flex-wrap gap-2">
               {existingPhotos.map((p) => (
                 <div key={p.id} className="relative">
-                  <img src={p.url} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                  <img
+                    src={p.url}
+                    alt=""
+                    className="w-20 h-20 rounded-lg object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => removeExistingPhoto(p.id)}
@@ -399,23 +488,33 @@ export function AddPlacePage() {
         )}
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">{isEdit ? "ახალი ფოტოების დამატება (მაქს. 6)" : "ფოტოები (მაქს. 6)"}</span>
+          <span className="font-medium">
+            {isEdit ? "ახალი ფოტოების დამატება (მაქს. 6)" : "ფოტოები (მაქს. 6)"}
+          </span>
           <input
             type="file"
             accept="image/*"
             multiple
-            onChange={(e) => setPhotos(Array.from(e.target.files || []).slice(0, 6))}
+            onChange={(e) =>
+              setPhotos(Array.from(e.target.files || []).slice(0, 6))
+            }
             className="text-sm"
           />
         </label>
 
-        {error && <p className="text-sm text-[color:var(--color-clay)]">{error}</p>}
+        {error && (
+          <p className="text-sm text-[color:var(--color-clay)]">{error}</p>
+        )}
 
         <button
           disabled={busy}
           className="bg-[color:var(--color-forest)] text-white rounded-lg py-2.5 font-medium hover:bg-[color:var(--color-forest-dark)] disabled:opacity-60"
         >
-          {busy ? "ინახება..." : isEdit ? "ცვლილებების შენახვა" : "ადგილის დამატება"}
+          {busy
+            ? "ინახება..."
+            : isEdit
+              ? "ცვლილებების შენახვა"
+              : "ადგილის დამატება"}
         </button>
       </form>
     </div>

@@ -13,14 +13,22 @@ export function ProfilePage() {
     if (user) navigate(`/users/${user.username}`, { replace: true });
   }, [user, navigate]);
 
-  if (loading) return <p className="text-center mt-16 text-[color:var(--color-ink-soft)]">იტვირთება...</p>;
+  if (loading)
+    return (
+      <p className="text-center mt-16 text-[color:var(--color-ink-soft)]">
+        იტვირთება...
+      </p>
+    );
 
   if (!user) {
     return (
       <div className="max-w-md mx-auto mt-16 px-4 text-center">
         <p className="text-[color:var(--color-ink-soft)]">
           პროფილის სანახავად საჭიროა{" "}
-          <Link to="/login" className="text-[color:var(--color-clay)] underline">
+          <Link
+            to="/login"
+            className="text-[color:var(--color-clay)] underline"
+          >
             ავტორიზაცია
           </Link>
           .

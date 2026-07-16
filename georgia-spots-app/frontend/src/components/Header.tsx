@@ -12,7 +12,7 @@ export function Header() {
         <Link to="/" className="flex items-center gap-2 group">
           <Tent size={24} strokeWidth={2} />
           <span className="font-display text-xl font-semibold tracking-wide group-hover:opacity-90">
-            სად დავდგე
+            Vanlife.Ge
           </span>
         </Link>
 
@@ -42,9 +42,17 @@ export function Header() {
                   <span className="hidden sm:inline">ადმინი</span>
                 </Link>
               )}
-              <Link to={`/users/${user.username}`} className="flex items-center gap-1.5 text-sm text-[#D9D4BE] hover:text-white" title={user.name}>
+              <Link
+                to={`/users/${user.username}`}
+                className="flex items-center gap-1.5 text-sm text-[#D9D4BE] hover:text-white"
+                title={user.name}
+              >
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  <img
+                    src={user.avatar_url}
+                    alt=""
+                    className="w-6 h-6 rounded-full object-cover"
+                  />
                 ) : (
                   <CircleUser size={20} />
                 )}
@@ -64,7 +72,10 @@ export function Header() {
             </>
           ) : (
             <>
-              <Link to="/login" className="text-sm font-medium hover:text-[#D9D4BE]">
+              <Link
+                to="/login"
+                className="text-sm font-medium hover:text-[#D9D4BE]"
+              >
                 შესვლა
               </Link>
               <Link

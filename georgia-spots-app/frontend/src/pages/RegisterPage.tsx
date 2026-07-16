@@ -34,9 +34,12 @@ export function RegisterPage() {
 
   return (
     <div className="max-w-sm mx-auto mt-12 px-4 pb-12">
-      <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-1">რეგისტრაცია</h1>
+      <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-1">
+        რეგისტრაცია
+      </h1>
       <p className="text-sm text-[color:var(--color-ink-soft)] mb-6">
-        შექმენით ანგარიში, რომ ნახოთ ადგილების დეტალები, დაამატოთ ადგილები და დატოვოთ შეფასებები.
+        შექმენით ანგარიში, რომ ნახოთ ადგილების დეტალები, დაამატოთ ადგილები და
+        დატოვოთ შეფასებები.
       </p>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <input
@@ -51,7 +54,11 @@ export function RegisterPage() {
             required
             placeholder="მომხმარებლის სახელი (username)"
             value={username}
-            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+            onChange={(e) =>
+              setUsername(
+                e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
+              )
+            }
             pattern="[a-z0-9_]{3,24}"
             title="3-24 სიმბოლო: ლათინური ასოები, ციფრები, ქვედა ტირე"
             className="w-full rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
@@ -85,11 +92,14 @@ export function RegisterPage() {
             className="mt-0.5"
           />
           <span>
-            <strong>ვპირდები, რომ ადგილს დავტოვებ ისეთივე სუფთა, როგორც დამხვდა</strong> — ნაგავს არ დავტოვებ და პატივს ვცემ ბუნებას და ადგილობრივ თემს.
+            <strong>ვპირდები, რომ ადგილს დავტოვებ სუფთას </strong> — ნაგავს არ
+            დავტოვებ და პატივს ვცემ ბუნებას.
           </span>
         </label>
 
-        {error && <p className="text-sm text-[color:var(--color-clay)]">{error}</p>}
+        {error && (
+          <p className="text-sm text-[color:var(--color-clay)]">{error}</p>
+        )}
         <button
           disabled={busy || !pledge}
           className="bg-[color:var(--color-forest)] text-white rounded-lg py-2 font-medium hover:bg-[color:var(--color-forest-dark)] disabled:opacity-60"
@@ -100,7 +110,10 @@ export function RegisterPage() {
 
       <div className="mt-4">
         {pledge ? (
-          <GoogleSignInButton agreedPledge={pledge} onDone={() => navigate("/")} />
+          <GoogleSignInButton
+            agreedPledge={pledge}
+            onDone={() => navigate("/")}
+          />
         ) : (
           <p className="text-xs text-center text-[color:var(--color-ink-soft)] mt-2">
             მონიშნეთ ზემოთ თანხმობა Google-ით გასაგრძელებლად

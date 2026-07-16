@@ -29,12 +29,18 @@ function ForgotPasswordForm({ onClose }: { onClose: () => void }) {
   if (done) {
     return (
       <div className="bg-[color:var(--color-bg)] rounded-lg p-4 text-sm mt-2">
-        <p className="text-[color:var(--color-forest)] font-medium mb-1">მოთხოვნა გაიგზავნა.</p>
-        <p className="text-[color:var(--color-ink-soft)]">
-          თქვენი მოთხოვნა გაეგზავნა ადმინისტრატორს — ის შეამოწმებს მას და ხელით გამოგიგზავნით აღდგენის ბმულს ან დროებით
-          პაროლს იმ ელ-ფოსტაზე, რომელიც მიუთითეთ.
+        <p className="text-[color:var(--color-forest)] font-medium mb-1">
+          მოთხოვნა გაიგზავნა.
         </p>
-        <button onClick={onClose} className="text-[color:var(--color-clay)] underline mt-2 text-sm">
+        <p className="text-[color:var(--color-ink-soft)]">
+          თქვენი მოთხოვნა გაეგზავნა ადმინისტრატორს — ის შეამოწმებს მას და ხელით
+          გამოგიგზავნით აღდგენის ბმულს ან დროებით პაროლს იმ ელ-ფოსტაზე, რომელიც
+          მიუთითეთ.
+        </p>
+        <button
+          onClick={onClose}
+          className="text-[color:var(--color-clay)] underline mt-2 text-sm"
+        >
           დახურვა
         </button>
       </div>
@@ -42,10 +48,14 @@ function ForgotPasswordForm({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-[color:var(--color-bg)] rounded-lg p-4 flex flex-col gap-2 mt-2">
+    <form
+      onSubmit={submit}
+      className="bg-[color:var(--color-bg)] rounded-lg p-4 flex flex-col gap-2 mt-2"
+    >
       <p className="text-xs text-[color:var(--color-ink-soft)] mb-1">
-        მიუთითეთ თქვენი ელ-ფოსტა და მომხმარებლის სახელი — ადმინისტრატორი დაინახავს მოთხოვნას და ხელით გამოგიგზავნით
-        პაროლის აღდგენის ბმულს იმ ელ-ფოსტაზე, როცა ის შეამჩნევს მას.
+        მიუთითეთ თქვენი ელ-ფოსტა და მომხმარებლის სახელი — ადმინისტრატორი
+        დაინახავს მოთხოვნას და ხელით გამოგიგზავნით პაროლის აღდგენის ბმულს იმ
+        ელ-ფოსტაზე, როცა ის შეამჩნევს მას.
       </p>
       <input
         type="email"
@@ -69,7 +79,9 @@ function ForgotPasswordForm({ onClose }: { onClose: () => void }) {
         rows={2}
         className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2 text-sm"
       />
-      {error && <p className="text-sm text-[color:var(--color-clay)]">{error}</p>}
+      {error && (
+        <p className="text-sm text-[color:var(--color-clay)]">{error}</p>
+      )}
       <div className="flex gap-2">
         <button
           disabled={busy}
@@ -77,7 +89,11 @@ function ForgotPasswordForm({ onClose }: { onClose: () => void }) {
         >
           {busy ? "..." : "მოთხოვნის გაგზავნა"}
         </button>
-        <button type="button" onClick={onClose} className="text-sm text-[color:var(--color-ink-soft)] px-3">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-sm text-[color:var(--color-ink-soft)] px-3"
+        >
           გაუქმება
         </button>
       </div>
@@ -110,10 +126,9 @@ export function LoginPage() {
 
   return (
     <div className="max-w-sm mx-auto mt-16 px-4">
-      <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-1">შესვლა</h1>
-      <p className="text-sm text-[color:var(--color-ink-soft)] mb-6">
-        დემო ანგარიში: demo@georgiaspots.ge / password123
-      </p>
+      <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-1">
+        შესვლა
+      </h1>
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <input
           type="email"
@@ -131,7 +146,9 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           className="rounded-lg border border-[color:var(--color-stone-dark)] px-3 py-2"
         />
-        {error && <p className="text-sm text-[color:var(--color-clay)]">{error}</p>}
+        {error && (
+          <p className="text-sm text-[color:var(--color-clay)]">{error}</p>
+        )}
         <button
           disabled={busy}
           className="bg-[color:var(--color-forest)] text-white rounded-lg py-2 font-medium hover:bg-[color:var(--color-forest-dark)] disabled:opacity-60"
@@ -146,7 +163,9 @@ export function LoginPage() {
       >
         დაგავიწყდათ პაროლი?
       </button>
-      {showForgot && <ForgotPasswordForm onClose={() => setShowForgot(false)} />}
+      {showForgot && (
+        <ForgotPasswordForm onClose={() => setShowForgot(false)} />
+      )}
 
       <div className="mt-4">
         <GoogleSignInButton agreedPledge={true} onDone={() => navigate("/")} />
@@ -154,7 +173,10 @@ export function LoginPage() {
 
       <p className="text-sm text-[color:var(--color-ink-soft)] mt-4">
         არ გაქვთ ანგარიში?{" "}
-        <Link to="/register" className="text-[color:var(--color-clay)] underline">
+        <Link
+          to="/register"
+          className="text-[color:var(--color-clay)] underline"
+        >
           დარეგისტრირდით
         </Link>
       </p>

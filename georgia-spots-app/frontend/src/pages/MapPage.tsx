@@ -9,7 +9,9 @@ import { Settings, Navigation, MapIcon, ListIcon, X } from "../icons";
 export function MapPage() {
   const [places, setPlaces] = useState<any[]>([]);
   const [filters, setFilters] = useState<Filters>({});
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(
+    null,
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [view, setView] = useState<"map" | "list">("map");
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export function MapPage() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-      () => alert("მდებარეობის დადგენა ვერ მოხერხდა")
+      () => alert("მდებარეობის დადგენა ვერ მოხერხდა"),
     );
   }
 
@@ -49,7 +51,8 @@ export function MapPage() {
           title="ჩემი მდებარეობა"
           className="flex items-center gap-1.5 text-sm font-medium px-2.5 sm:px-3 py-1.5 rounded-full border border-[color:var(--color-stone-dark)] hover:bg-[color:var(--color-bg)] shrink-0"
         >
-          <Navigation size={15} /> <span className="hidden sm:inline">ჩემი მდებარეობა</span>
+          <Navigation size={15} />{" "}
+          <span className="hidden sm:inline">ჩემი მდებარეობა</span>
         </button>
         <div className="ml-auto flex gap-1 bg-[color:var(--color-bg)] rounded-full p-1 shrink-0">
           <button
@@ -62,7 +65,8 @@ export function MapPage() {
             onClick={() => setView("list")}
             className={`flex items-center gap-1.5 text-sm px-2.5 sm:px-3 py-1 rounded-full whitespace-nowrap ${view === "list" ? "bg-[color:var(--color-forest)] text-white" : ""}`}
           >
-            <ListIcon size={14} /> სია <span className="tabular-nums">({places.length})</span>
+            <ListIcon size={14} /> სია{" "}
+            <span className="tabular-nums">({places.length})</span>
           </button>
         </div>
       </div>
@@ -75,7 +79,11 @@ export function MapPage() {
                 <X size={20} />
               </button>
             </div>
-            <FilterPanel filters={filters} onChange={setFilters} onReset={() => setFilters({})} />
+            <FilterPanel
+              filters={filters}
+              onChange={setFilters}
+              onReset={() => setFilters({})}
+            />
           </div>
         )}
 
@@ -85,7 +93,9 @@ export function MapPage() {
           ) : (
             <div className="h-full overflow-y-auto p-4">
               {loading ? (
-                <p className="text-center text-[color:var(--color-ink-soft)] py-10">იტვირთება...</p>
+                <p className="text-center text-[color:var(--color-ink-soft)] py-10">
+                  იტვირთება...
+                </p>
               ) : places.length === 0 ? (
                 <p className="text-center text-[color:var(--color-ink-soft)] py-10">
                   ამ ფილტრებით ადგილი ვერ მოიძებნა.
