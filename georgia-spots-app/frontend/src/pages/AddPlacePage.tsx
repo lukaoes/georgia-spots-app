@@ -219,7 +219,16 @@ export function AddPlacePage() {
         navigate(`/place/${place.place.id}`);
       }
     } catch (err: any) {
-      setError(err.message);
+      // A real server error (validation, auth, etc.) already comes through as a clean message
+      // via api.ts's handle(). A raw "Load failed" / "Failed to fetch" means the request itself
+      // never completed - a dropped connection, slow mobile network, or the backend taking too
+      // long - so show something the person can actually act on instead of that browser text.
+      const isNetworkFailure = err instanceof TypeError || /load failed|fetch/i.test(err?.message || "");
+      setError(
+        isNetworkFailure
+          ? "კავშირი შეწყდა ატვირთვისას. გთხოვთ შეამოწმოთ ინტერნეტ კავშირი და სცადოთ ისევ (ნაკლები ან უფრო მსუბუქი ფოტოებით, თუ პრობლემა მეორდება)."
+          : err.message
+      );
     } finally {
       setBusy(false);
     }
