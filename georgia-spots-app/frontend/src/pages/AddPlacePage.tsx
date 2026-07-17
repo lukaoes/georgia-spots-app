@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -16,7 +16,7 @@ import {
   GROUND_LEVELS,
   SERVICES,
 } from "../constants";
-import { ServiceIcon, Navigation, X } from "../icons";
+import { ServiceIcon, Navigation, X, Plus } from "../icons";
 
 const GEORGIA_CENTER: [number, number] = [42.15, 43.5];
 
@@ -80,7 +80,49 @@ export function AddPlacePage() {
   const [quietness, setQuietness] = useState("quiet");
   const [shade, setShade] = useState(false);
   const [groundLevel, setGroundLevel] = useState("flat");
-  const [photos, setPhotos] = useState<File[]>([]);
+  // Each of the 6 boxes uploads its own photo the moment it's picked - one file per request,
+  // instead of collecting all files and sending them together at submit time. This sidesteps
+  // the free-tier backend's memory/CPU limit entirely, since it never has to process more than
+  // one photo at once no matter how many boxes the person fills in.
+  const MAX_PHOTOS = 6;
+  const [slots, setSlots] = useState<
+    Array<{ status: "empty" | "uploading" | "done" | "error"; previewUrl?: string; uploadedUrl?: string; error?: string }>
+  >(Array.from({ length: MAX_PHOTOS }, () => ({ status: "empty" })));
+  const fileInputRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  function uploadIntoSlot(idx: number, file: File) {
+    const previewUrl = URL.createObjectURL(file);
+    setSlots((prev) => {
+      const next = [...prev];
+      next[idx] = { status: "uploading", previewUrl };
+      return next;
+    });
+    api
+      .uploadPhotos([file], "place")
+      .then((res) => {
+        setSlots((prev) => {
+          const next = [...prev];
+          next[idx] = { status: "done", previewUrl, uploadedUrl: res.urls[0] };
+          return next;
+        });
+      })
+      .catch((err: any) => {
+        setSlots((prev) => {
+          const next = [...prev];
+          next[idx] = { status: "error", previewUrl, error: err?.message || "ატვირთვა ვერ მოხერხდა" };
+          return next;
+        });
+      });
+  }
+
+  function clearSlot(idx: number) {
+    setSlots((prev) => {
+      const next = [...prev];
+      if (next[idx].previewUrl) URL.revokeObjectURL(next[idx].previewUrl!);
+      next[idx] = { status: "empty" };
+      return next;
+    });
+  }
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -182,13 +224,15 @@ export function AddPlacePage() {
       setError("ადგილის სახელი სავალდებულოა.");
       return;
     }
+    if (slots.some((s) => s.status === "uploading")) {
+      setError("სურათები ჯერ იტვირთება, გთხოვთ დაელოდოთ.");
+      return;
+    }
     setBusy(true);
     try {
-      let photo_urls: string[] = [];
-      if (photos.length > 0) {
-        const up = await api.uploadPhotos(photos, "place");
-        photo_urls = up.urls;
-      }
+      const photo_urls = slots
+        .filter((s) => s.status === "done" && s.uploadedUrl)
+        .map((s) => s.uploadedUrl!);
       const payload = {
         name,
         description,
@@ -566,34 +610,85 @@ export function AddPlacePage() {
           </div>
         )}
 
-        <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           <span className="font-medium">
             {isEdit ? "ახალი ფოტოების დამატება (მაქს. 6)" : "ფოტოები (მაქს. 6)"}
           </span>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) =>
-              setPhotos(Array.from(e.target.files || []).slice(0, 6))
-            }
-            className="text-sm"
-          />
-        </label>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {slots.map((slot, idx) => (
+              <div key={idx} className="relative aspect-square">
+                {slot.status === "empty" ? (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRefs.current[idx]?.click()}
+                    className="w-full h-full rounded-xl border-2 border-dashed border-[color:var(--color-stone-dark)] flex items-center justify-center text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-bg)]"
+                    aria-label="ფოტოს დამატება"
+                  >
+                    <Plus size={26} />
+                  </button>
+                ) : (
+                  <div className="w-full h-full rounded-xl overflow-hidden border border-[color:var(--color-stone)] relative">
+                    {slot.previewUrl && (
+                      <img src={slot.previewUrl} alt="" className="w-full h-full object-cover" />
+                    )}
+                    {slot.status === "uploading" && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      </div>
+                    )}
+                    {slot.status === "error" && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRefs.current[idx]?.click()}
+                        className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-0.5 text-center px-1"
+                      >
+                        <span className="text-white text-[10px] leading-tight">ვერ აიტვირთა</span>
+                        <span className="text-white text-[10px] underline">თავიდან ცდა</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => clearSlot(idx)}
+                      className="absolute -top-1.5 -right-1.5 bg-[color:var(--color-clay)] text-white rounded-full p-1"
+                      aria-label="ფოტოს წაშლა"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+                <input
+                  ref={(el) => {
+                    fileInputRefs.current[idx] = el;
+                  }}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadIntoSlot(idx, file);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
 
         {error && (
           <p className="text-sm text-[color:var(--color-clay)]">{error}</p>
         )}
 
         <button
-          disabled={busy}
+          disabled={busy || slots.some((s) => s.status === "uploading")}
           className="bg-[color:var(--color-forest)] text-white rounded-lg py-2.5 font-medium hover:bg-[color:var(--color-forest-dark)] disabled:opacity-60"
         >
           {busy
             ? "ინახება..."
-            : isEdit
-              ? "ცვლილებების შენახვა"
-              : "ადგილის დამატება"}
+            : slots.some((s) => s.status === "uploading")
+              ? "ფოტოები იტვირთება..."
+              : isEdit
+                ? "ცვლილებების შენახვა"
+                : "ადგილის დამატება"}
         </button>
       </form>
     </div>
