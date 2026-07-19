@@ -80,49 +80,63 @@ export function AddPlacePage() {
   const [quietness, setQuietness] = useState("quiet");
   const [shade, setShade] = useState(false);
   const [groundLevel, setGroundLevel] = useState("flat");
-  // Each of the 6 boxes uploads its own photo the moment it's picked - one file per request,
-  // instead of collecting all files and sending them together at submit time. This sidesteps
-  // the free-tier backend's memory/CPU limit entirely, since it never has to process more than
-  // one photo at once no matter how many boxes the person fills in.
+  // Only one photo uploads at a time: the next box only appears once the current one finishes
+  // successfully. Multiple boxes existing at once meant a person could tap several of them in
+  // quick succession, which still sent multiple concurrent requests to the backend even though
+  // each request only carried one file - and that's still enough concurrent load to overwhelm a
+  // small free-tier container. Strictly one-at-a-time removes that possibility entirely.
   const MAX_PHOTOS = 6;
-  const [slots, setSlots] = useState<
-    Array<{ status: "empty" | "uploading" | "done" | "error"; previewUrl?: string; uploadedUrl?: string; error?: string }>
-  >(Array.from({ length: MAX_PHOTOS }, () => ({ status: "empty" })));
-  const fileInputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  interface PhotoItem {
+    id: number;
+    file: File;
+    status: "uploading" | "done" | "error";
+    previewUrl: string;
+    uploadedUrl?: string;
+    error?: string;
+  }
+  const [photoList, setPhotoList] = useState<PhotoItem[]>([]);
+  const nextPhotoId = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  function uploadIntoSlot(idx: number, file: File) {
-    const previewUrl = URL.createObjectURL(file);
-    setSlots((prev) => {
-      const next = [...prev];
-      next[idx] = { status: "uploading", previewUrl };
-      return next;
-    });
+  function runUpload(id: number, file: File) {
     api
       .uploadPhotos([file], "place")
       .then((res) => {
-        setSlots((prev) => {
-          const next = [...prev];
-          next[idx] = { status: "done", previewUrl, uploadedUrl: res.urls[0] };
-          return next;
-        });
+        setPhotoList((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: "done", uploadedUrl: res.urls[0] } : p))
+        );
       })
       .catch((err: any) => {
-        setSlots((prev) => {
-          const next = [...prev];
-          next[idx] = { status: "error", previewUrl, error: err?.message || "ატვირთვა ვერ მოხერხდა" };
-          return next;
-        });
+        setPhotoList((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: "error", error: err?.message || "ატვირთვა ვერ მოხერხდა" } : p))
+        );
       });
   }
 
-  function clearSlot(idx: number) {
-    setSlots((prev) => {
-      const next = [...prev];
-      if (next[idx].previewUrl) URL.revokeObjectURL(next[idx].previewUrl!);
-      next[idx] = { status: "empty" };
-      return next;
+  function addPhoto(file: File) {
+    const id = nextPhotoId.current++;
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoList((prev) => [...prev, { id, file, status: "uploading", previewUrl }]);
+    runUpload(id, file);
+  }
+
+  function retryPhoto(id: number) {
+    const item = photoList.find((p) => p.id === id);
+    if (!item) return;
+    setPhotoList((prev) => prev.map((p) => (p.id === id ? { ...p, status: "uploading", error: undefined } : p)));
+    runUpload(id, item.file);
+  }
+
+  function removePhoto(id: number) {
+    setPhotoList((prev) => {
+      const item = prev.find((p) => p.id === id);
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((p) => p.id !== id);
     });
   }
+
+  const canShowNextBox =
+    photoList.length < MAX_PHOTOS && (photoList.length === 0 || photoList[photoList.length - 1].status === "done");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -224,15 +238,15 @@ export function AddPlacePage() {
       setError("ადგილის სახელი სავალდებულოა.");
       return;
     }
-    if (slots.some((s) => s.status === "uploading")) {
+    if (photoList.some((p) => p.status === "uploading")) {
       setError("სურათები ჯერ იტვირთება, გთხოვთ დაელოდოთ.");
       return;
     }
     setBusy(true);
     try {
-      const photo_urls = slots
-        .filter((s) => s.status === "done" && s.uploadedUrl)
-        .map((s) => s.uploadedUrl!);
+      const photo_urls = photoList
+        .filter((p) => p.status === "done" && p.uploadedUrl)
+        .map((p) => p.uploadedUrl!);
       const payload = {
         name,
         description,
@@ -615,63 +629,67 @@ export function AddPlacePage() {
             {isEdit ? "ახალი ფოტოების დამატება (მაქს. 6)" : "ფოტოები (მაქს. 6)"}
           </span>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {slots.map((slot, idx) => (
-              <div key={idx} className="relative aspect-square">
-                {slot.status === "empty" ? (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRefs.current[idx]?.click()}
-                    className="w-full h-full rounded-xl border-2 border-dashed border-[color:var(--color-stone-dark)] flex items-center justify-center text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-bg)]"
-                    aria-label="ფოტოს დამატება"
-                  >
-                    <Plus size={26} />
-                  </button>
-                ) : (
-                  <div className="w-full h-full rounded-xl overflow-hidden border border-[color:var(--color-stone)] relative">
-                    {slot.previewUrl && (
-                      <img src={slot.previewUrl} alt="" className="w-full h-full object-cover" />
-                    )}
-                    {slot.status === "uploading" && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      </div>
-                    )}
-                    {slot.status === "error" && (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRefs.current[idx]?.click()}
-                        className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-0.5 text-center px-1"
-                      >
-                        <span className="text-white text-[10px] leading-tight">ვერ აიტვირთა</span>
-                        <span className="text-white text-[10px] underline">თავიდან ცდა</span>
-                      </button>
-                    )}
+            {photoList.map((item) => (
+              <div key={item.id} className="relative aspect-square">
+                <div className="w-full h-full rounded-xl overflow-hidden border border-[color:var(--color-stone)] relative">
+                  <img src={item.previewUrl} alt="" className="w-full h-full object-cover" />
+                  {item.status === "uploading" && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {item.status === "error" && (
                     <button
                       type="button"
-                      onClick={() => clearSlot(idx)}
+                      onClick={() => retryPhoto(item.id)}
+                      className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-0.5 text-center px-1"
+                    >
+                      <span className="text-white text-[10px] leading-tight">ვერ აიტვირთა</span>
+                      <span className="text-white text-[10px] underline">თავიდან ცდა</span>
+                    </button>
+                  )}
+                  {item.status !== "uploading" && (
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(item.id)}
                       className="absolute -top-1.5 -right-1.5 bg-[color:var(--color-clay)] text-white rounded-full p-1"
                       aria-label="ფოტოს წაშლა"
                     >
                       <X size={12} />
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
+              </div>
+            ))}
+            {canShowNextBox && (
+              <div className="relative aspect-square">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-full rounded-xl border-2 border-dashed border-[color:var(--color-stone-dark)] flex items-center justify-center text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-bg)]"
+                  aria-label="ფოტოს დამატება"
+                >
+                  <Plus size={26} />
+                </button>
                 <input
-                  ref={(el) => {
-                    fileInputRefs.current[idx] = el;
-                  }}
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) uploadIntoSlot(idx, file);
+                    if (file) addPhoto(file);
                     e.target.value = "";
                   }}
                 />
               </div>
-            ))}
+            )}
           </div>
+          {photoList.some((p) => p.status === "uploading") && (
+            <p className="text-xs text-[color:var(--color-ink-soft)]">
+              სურათი იტვირთება... შემდეგი სურათის დამატება შესაძლებელი იქნება ატვირთვის დასრულების შემდეგ.
+            </p>
+          )}
         </div>
 
         {error && (
@@ -679,12 +697,12 @@ export function AddPlacePage() {
         )}
 
         <button
-          disabled={busy || slots.some((s) => s.status === "uploading")}
+          disabled={busy || photoList.some((p) => p.status === "uploading")}
           className="bg-[color:var(--color-forest)] text-white rounded-lg py-2.5 font-medium hover:bg-[color:var(--color-forest-dark)] disabled:opacity-60"
         >
           {busy
             ? "ინახება..."
-            : slots.some((s) => s.status === "uploading")
+            : photoList.some((p) => p.status === "uploading")
               ? "ფოტოები იტვირთება..."
               : isEdit
                 ? "ცვლილებების შენახვა"
