@@ -8,6 +8,40 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// Shrinks a photo in the browser before it's uploaded, so the server only ever has to decode
+// an already-small image instead of a full phone photo (often 10-40MB of raw pixel data once
+// decompressed). The backend runs on a very small container, and decoding a full-size original
+// just to immediately shrink it was using enough memory on its own to crash the process - doing
+// the shrink here removes that problem at the source rather than working around it server-side.
+// Falls back to the original file untouched if the browser can't process it for any reason
+// (unsupported format, older browser, etc.) - the backend still resizes as a safety net either way.
+async function resizeImageClientSide(file: File, maxDim = 1600, quality = 0.85): Promise<File> {
+  try {
+    // imageOrientation: "from-image" makes the browser apply EXIF rotation itself, so a photo
+    // taken in portrait doesn't come out sideways.
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    if (!blob) return file;
+
+    const newName = file.name.replace(/\.[^./\\]+$/, "") + ".jpg";
+    return new File([blob], newName, { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
 async function handle(res: Response) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -90,9 +124,10 @@ export const api = {
   // context: "place" | "review" | "avatar" - the backend watermarks place/review photos
   // (content people browse and could scrape) but skips it for avatars, since a profile
   // picture isn't the kind of content anyone's trying to lift.
-  uploadPhotos: (files: File[], context: "place" | "review" | "avatar" = "place") => {
+  uploadPhotos: async (files: File[], context: "place" | "review" | "avatar" = "place") => {
+    const resized = await Promise.all(files.map((f) => resizeImageClientSide(f)));
     const form = new FormData();
-    files.forEach((f) => form.append("photos", f));
+    resized.forEach((f) => form.append("photos", f));
     form.append("context", context);
     return fetch(`${API_BASE}/uploads`, {
       method: "POST",
