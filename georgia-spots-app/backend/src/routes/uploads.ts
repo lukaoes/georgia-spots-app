@@ -2,6 +2,14 @@ import { Router } from "express";
 import multer from "multer";
 import path from "path";
 import sharp from "sharp";
+// sharp/libvips defaults are tuned for a real server with multiple cores and spare RAM: it
+// multi-threads each operation internally and keeps a cache of recently processed images. On a
+// small/constrained container (like a free hosting tier), that's enough on its own to push
+// memory past the container's limit and get the whole process OOM-killed - even for a single
+// photo, since this isn't about how many requests happen concurrently, just what one sharp
+// operation uses internally. This is the standard mitigation for exactly that situation.
+sharp.cache(false);
+sharp.concurrency(1);
 import { v4 as uuid } from "uuid";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
