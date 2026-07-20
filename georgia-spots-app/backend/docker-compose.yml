@@ -1,0 +1,44 @@
+services:
+  vanlife-backend:
+    build: .
+    container_name: vanlife-backend
+    restart: unless-stopped
+    # Host port 4001 (adjust if that's already used by something else on your server) mapped to
+    # the container's internal 4000, so you can also reach it directly at
+    # http://192.168.100.11:4001 for local testing without going through the tunnel.
+    ports:
+      - "4001:4000"
+    volumes:
+      # SQLite lives here so it survives container rebuilds/updates. CasaOS convention is to
+      # keep app data under /DATA/AppData/<app-name> - create this folder first (see steps).
+      - /DATA/AppData/vanlife-backend/data:/data
+    environment:
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_PATH=/data/data.sqlite
+      - FRONTEND_ORIGIN=https://vanlife.ge
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
+      - WATERMARK_TEXT=vanlife.ge
+    networks:
+      - vanlife-net
+
+  # Cloudflare Tunnel connector: makes this backend reachable at api.vanlife.ge without opening
+  # any port on your router or needing a static/public IP - it only makes outbound connections
+  # to Cloudflare. Get CLOUDFLARE_TUNNEL_TOKEN from the setup steps below.
+  vanlife-cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: vanlife-cloudflared
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - vanlife-net
+    depends_on:
+      - vanlife-backend
+
+networks:
+  vanlife-net:
+    driver: bridge
