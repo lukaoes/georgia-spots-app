@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -16,7 +16,7 @@ import {
   GROUND_LEVELS,
   SERVICES,
 } from "../constants";
-import { ServiceIcon, Navigation, X } from "../icons";
+import { ServiceIcon, Navigation, X, Plus } from "../icons";
 
 const GEORGIA_CENTER: [number, number] = [42.15, 43.5];
 
@@ -80,7 +80,63 @@ export function AddPlacePage() {
   const [quietness, setQuietness] = useState("quiet");
   const [shade, setShade] = useState(false);
   const [groundLevel, setGroundLevel] = useState("flat");
-  const [photos, setPhotos] = useState<File[]>([]);
+  // Only one photo uploads at a time: the next box only appears once the current one finishes
+  // successfully. Multiple boxes existing at once meant a person could tap several of them in
+  // quick succession, which still sent multiple concurrent requests to the backend even though
+  // each request only carried one file - and that's still enough concurrent load to overwhelm a
+  // small free-tier container. Strictly one-at-a-time removes that possibility entirely.
+  const MAX_PHOTOS = 6;
+  interface PhotoItem {
+    id: number;
+    file: File;
+    status: "uploading" | "done" | "error";
+    previewUrl: string;
+    uploadedUrl?: string;
+    error?: string;
+  }
+  const [photoList, setPhotoList] = useState<PhotoItem[]>([]);
+  const nextPhotoId = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  function runUpload(id: number, file: File) {
+    api
+      .uploadPhotos([file], "place")
+      .then((res) => {
+        setPhotoList((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: "done", uploadedUrl: res.urls[0] } : p))
+        );
+      })
+      .catch((err: any) => {
+        setPhotoList((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: "error", error: err?.message || "ატვირთვა ვერ მოხერხდა" } : p))
+        );
+      });
+  }
+
+  function addPhoto(file: File) {
+    const id = nextPhotoId.current++;
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoList((prev) => [...prev, { id, file, status: "uploading", previewUrl }]);
+    runUpload(id, file);
+  }
+
+  function retryPhoto(id: number) {
+    const item = photoList.find((p) => p.id === id);
+    if (!item) return;
+    setPhotoList((prev) => prev.map((p) => (p.id === id ? { ...p, status: "uploading", error: undefined } : p)));
+    runUpload(id, item.file);
+  }
+
+  function removePhoto(id: number) {
+    setPhotoList((prev) => {
+      const item = prev.find((p) => p.id === id);
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+  }
+
+  const canShowNextBox =
+    photoList.length < MAX_PHOTOS && (photoList.length === 0 || photoList[photoList.length - 1].status === "done");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -182,13 +238,15 @@ export function AddPlacePage() {
       setError("ადგილის სახელი სავალდებულოა.");
       return;
     }
+    if (photoList.some((p) => p.status === "uploading")) {
+      setError("სურათები ჯერ იტვირთება, გთხოვთ დაელოდოთ.");
+      return;
+    }
     setBusy(true);
     try {
-      let photo_urls: string[] = [];
-      if (photos.length > 0) {
-        const up = await api.uploadPhotos(photos, "place");
-        photo_urls = up.urls;
-      }
+      const photo_urls = photoList
+        .filter((p) => p.status === "done" && p.uploadedUrl)
+        .map((p) => p.uploadedUrl!);
       const payload = {
         name,
         description,
@@ -219,7 +277,16 @@ export function AddPlacePage() {
         navigate(`/place/${place.place.id}`);
       }
     } catch (err: any) {
-      setError(err.message);
+      // A real server error (validation, auth, etc.) already comes through as a clean message
+      // via api.ts's handle(). A raw "Load failed" / "Failed to fetch" means the request itself
+      // never completed - a dropped connection, slow mobile network, or the backend taking too
+      // long - so show something the person can actually act on instead of that browser text.
+      const isNetworkFailure = err instanceof TypeError || /load failed|fetch/i.test(err?.message || "");
+      setError(
+        isNetworkFailure
+          ? "კავშირი შეწყდა ატვირთვისას. გთხოვთ შეამოწმოთ ინტერნეტ კავშირი და სცადოთ ისევ (ნაკლები ან უფრო მსუბუქი ფოტოებით, თუ პრობლემა მეორდება)."
+          : err.message
+      );
     } finally {
       setBusy(false);
     }
@@ -557,34 +624,89 @@ export function AddPlacePage() {
           </div>
         )}
 
-        <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           <span className="font-medium">
             {isEdit ? "ახალი ფოტოების დამატება (მაქს. 6)" : "ფოტოები (მაქს. 6)"}
           </span>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) =>
-              setPhotos(Array.from(e.target.files || []).slice(0, 6))
-            }
-            className="text-sm"
-          />
-        </label>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {photoList.map((item) => (
+              <div key={item.id} className="relative aspect-square">
+                <div className="w-full h-full rounded-xl overflow-hidden border border-[color:var(--color-stone)] relative">
+                  <img src={item.previewUrl} alt="" className="w-full h-full object-cover" />
+                  {item.status === "uploading" && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {item.status === "error" && (
+                    <button
+                      type="button"
+                      onClick={() => retryPhoto(item.id)}
+                      className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-0.5 text-center px-1"
+                    >
+                      <span className="text-white text-[10px] leading-tight">ვერ აიტვირთა</span>
+                      <span className="text-white text-[10px] underline">თავიდან ცდა</span>
+                    </button>
+                  )}
+                  {item.status !== "uploading" && (
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(item.id)}
+                      className="absolute -top-1.5 -right-1.5 bg-[color:var(--color-clay)] text-white rounded-full p-1"
+                      aria-label="ფოტოს წაშლა"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {canShowNextBox && (
+              <div className="relative aspect-square">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-full rounded-xl border-2 border-dashed border-[color:var(--color-stone-dark)] flex items-center justify-center text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-bg)]"
+                  aria-label="ფოტოს დამატება"
+                >
+                  <Plus size={26} />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) addPhoto(file);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          {photoList.some((p) => p.status === "uploading") && (
+            <p className="text-xs text-[color:var(--color-ink-soft)]">
+              სურათი იტვირთება... შემდეგი სურათის დამატება შესაძლებელი იქნება ატვირთვის დასრულების შემდეგ.
+            </p>
+          )}
+        </div>
 
         {error && (
           <p className="text-sm text-[color:var(--color-clay)]">{error}</p>
         )}
 
         <button
-          disabled={busy}
+          disabled={busy || photoList.some((p) => p.status === "uploading")}
           className="bg-[color:var(--color-forest)] text-white rounded-lg py-2.5 font-medium hover:bg-[color:var(--color-forest-dark)] disabled:opacity-60"
         >
           {busy
             ? "ინახება..."
-            : isEdit
-              ? "ცვლილებების შენახვა"
-              : "ადგილის დამატება"}
+            : photoList.some((p) => p.status === "uploading")
+              ? "ფოტოები იტვირთება..."
+              : isEdit
+                ? "ცვლილებების შენახვა"
+                : "ადგილის დამატება"}
         </button>
       </form>
     </div>

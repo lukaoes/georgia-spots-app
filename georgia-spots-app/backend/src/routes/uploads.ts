@@ -2,8 +2,17 @@ import { Router } from "express";
 import multer from "multer";
 import path from "path";
 import sharp from "sharp";
+// sharp/libvips defaults are tuned for a real server with multiple cores and spare RAM: it
+// multi-threads each operation internally and keeps a cache of recently processed images. On a
+// small/constrained container (like a free hosting tier), that's enough on its own to push
+// memory past the container's limit and get the whole process OOM-killed - even for a single
+// photo, since this isn't about how many requests happen concurrently, just what one sharp
+// operation uses internally. This is the standard mitigation for exactly that situation.
+sharp.cache(false);
+sharp.concurrency(1);
 import { v4 as uuid } from "uuid";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -38,6 +47,12 @@ const s3 = R2_ENABLED
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
+      // Without an explicit timeout, a slow or unreachable R2 endpoint can hang well past
+      // whatever timeout the hosting platform's own proxy enforces - the request then dies
+      // at the proxy layer with a generic network error client-side ("Load failed" in Safari)
+      // instead of a clear message. Failing fast here means the app always controls the error.
+      requestHandler: new NodeHttpHandler({ connectionTimeout: 5000, socketTimeout: 15000 }),
+      maxAttempts: 2,
     })
   : null;
 
@@ -70,37 +85,51 @@ function watermarkSvg(width: number, height: number) {
 router.post("/", requireAuth, upload.array("photos", 6), async (req, res) => {
   const files = (req.files as Express.Multer.File[]) || [];
   const isAvatar = req.body?.context === "avatar";
+
+  async function processFile(file: Express.Multer.File): Promise<string> {
+    const filename = `${uuid()}.webp`;
+    const { data: resized, info } = await sharp(file.buffer)
+      .rotate() // respect EXIF orientation
+      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+      .toBuffer({ resolveWithObject: true });
+
+    let out = sharp(resized);
+    if (!isAvatar) {
+      out = out.composite([{ input: watermarkSvg(info.width, info.height), gravity: "southeast" }]);
+    }
+
+    const buffer = await out.webp({ quality: 78 }).toBuffer();
+
+    if (R2_ENABLED && s3) {
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: filename,
+          Body: buffer,
+          ContentType: "image/webp",
+        })
+      );
+      return `${process.env.R2_PUBLIC_URL}/${filename}`;
+    } else {
+      const fs = await import("fs/promises");
+      await fs.writeFile(path.join(uploadsDir, filename), buffer);
+      return `/uploads/${filename}`;
+    }
+  }
+
   try {
+    // Fully parallel (Promise.all over every file at once) was too aggressive for a small,
+    // memory/CPU-constrained free-tier container: several concurrent sharp operations plus
+    // several concurrent R2 uploads can spike past the container's limits, and the container
+    // (or the platform's proxy in front of it) drops the connection - which shows up client-side
+    // as a generic network failure. Processing in small batches keeps a real speed benefit over
+    // doing them fully one-by-one, while keeping peak concurrent memory/CPU use bounded.
+    const CONCURRENCY = 2;
     const urls: string[] = [];
-    for (const file of files) {
-      const filename = `${uuid()}.webp`;
-      const { data: resized, info } = await sharp(file.buffer)
-        .rotate() // respect EXIF orientation
-        .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
-        .toBuffer({ resolveWithObject: true });
-
-      let out = sharp(resized);
-      if (!isAvatar) {
-        out = out.composite([{ input: watermarkSvg(info.width, info.height), gravity: "southeast" }]);
-      }
-
-      const buffer = await out.webp({ quality: 78 }).toBuffer();
-
-      if (R2_ENABLED && s3) {
-        await s3.send(
-          new PutObjectCommand({
-            Bucket: process.env.R2_BUCKET_NAME,
-            Key: filename,
-            Body: buffer,
-            ContentType: "image/webp",
-          })
-        );
-        urls.push(`${process.env.R2_PUBLIC_URL}/${filename}`);
-      } else {
-        const fs = await import("fs/promises");
-        await fs.writeFile(path.join(uploadsDir, filename), buffer);
-        urls.push(`/uploads/${filename}`);
-      }
+    for (let i = 0; i < files.length; i += CONCURRENCY) {
+      const batch = files.slice(i, i + CONCURRENCY);
+      const batchUrls = await Promise.all(batch.map(processFile));
+      urls.push(...batchUrls);
     }
     res.status(201).json({ urls });
   } catch (err: any) {
