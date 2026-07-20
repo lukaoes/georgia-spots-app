@@ -1,12 +1,22 @@
 import { Router } from "express";
 import crypto from "crypto";
 import { v4 as uuid } from "uuid";
-import { db } from "../db";
+import { db, dbPath } from "../db";
 import { requireAuth, requireAdmin, AuthedRequest } from "../middleware/auth";
 import { inferRegion } from "../regions";
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
+
+// TEMPORARY - for migrating the database to a new host. Remove this route once done;
+// it's admin-gated (same auth as the rest of this router) but there's no reason to leave a
+// raw database download endpoint sitting around permanently.
+// Checkpointing first merges any pending WAL data into the main file, so what's downloaded
+// is actually complete rather than missing whatever hasn't been flushed to disk yet.
+router.get("/export-db", (req, res) => {
+  db.pragma("wal_checkpoint(TRUNCATE)");
+  res.download(dbPath, "data.sqlite");
+});
 
 const BOOL_FIELDS = [
   "is_free", "service_water", "service_dump", "service_electricity", "service_shower",
