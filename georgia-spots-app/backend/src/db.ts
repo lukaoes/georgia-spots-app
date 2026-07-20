@@ -5,6 +5,7 @@ import path from "path";
 // volume (e.g. /data/data.sqlite) so the database survives restarts/redeploys. Left unset,
 // it defaults to a file next to the project - fine for local development.
 const dbPath = process.env.DB_PATH || path.join(__dirname, "..", "data.sqlite");
+export { dbPath };
 export const db = new Database(dbPath);
 
 db.pragma("journal_mode = WAL");
