@@ -16,7 +16,7 @@ services:
       - PORT=4000
       - JWT_SECRET=${JWT_SECRET}
       - DB_PATH=/data/data.sqlite
-      - FRONTEND_ORIGIN=https://vanlife.ge
+      - FRONTEND_ORIGIN=https://georgia-spots-app.vercel.app
       - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
       - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
       - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
@@ -26,14 +26,17 @@ services:
     networks:
       - vanlife-net
 
-  # Cloudflare Tunnel connector: makes this backend reachable at api.vanlife.ge without opening
-  # any port on your router or needing a static/public IP - it only makes outbound connections
-  # to Cloudflare. Get CLOUDFLARE_TUNNEL_TOKEN from the setup steps below.
+  # Quick Tunnel: gives this backend a free public HTTPS URL (like https://random-words
+  # .trycloudflare.com) with no domain and no Cloudflare dashboard setup needed. The URL prints
+  # in this container's logs - check it with `docker compose logs vanlife-cloudflared`.
+  # Trade-off: the URL isn't permanent - if this container restarts (server reboot, update,
+  # etc.), Cloudflare generates a new random URL, and vercel.json's rewrite destination needs
+  # updating to match. Fine for a personal project, just don't expect it to never change.
   vanlife-cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: vanlife-cloudflared
     restart: unless-stopped
-    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel --url http://vanlife-backend:4000 --no-autoupdate
     networks:
       - vanlife-net
     depends_on:
