@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://site--vanlife--mfl799sxqq4t.code.run/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://trustee-initiated-instructional-launches.trycloudflare.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
