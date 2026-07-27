@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { api } from "../api";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { SEO } from "../components/SEO";
 
 function ForgotPasswordForm({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
@@ -126,6 +127,11 @@ export function LoginPage() {
 
   return (
     <div className="max-w-sm mx-auto mt-16 px-4">
+      <SEO
+        title="შესვლა"
+        description="შედით თქვენს Vanlife.Ge ანგარიშზე ბანაკების დასამატებლად, შესაფასებლად და საყვარელი ადგილების შესანახად."
+        path="/login"
+      />
       <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-1">
         შესვლა
       </h1>
