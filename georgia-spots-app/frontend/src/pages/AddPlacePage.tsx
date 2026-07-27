@@ -17,6 +17,7 @@ import {
   SERVICES,
 } from "../constants";
 import { ServiceIcon, Navigation, X, Plus } from "../icons";
+import { SEO } from "../components/SEO";
 
 const GEORGIA_CENTER: [number, number] = [42.15, 43.5];
 
@@ -312,6 +313,12 @@ export function AddPlacePage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
+      <SEO
+        title={isEdit ? "ადგილის რედაქტირება" : "ახალი ადგილის დამატება"}
+        description="დაამატეთ ან დაარედაქტირეთ ბანაკის ინფორმაცია Vanlife.Ge-ზე."
+        path={isEdit ? `/edit/${id}` : "/add"}
+        noindex
+      />
       <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-1">
         {isEdit ? "ადგილის რედაქტირება" : "ახალი ადგილის დამატება"}
       </h1>
