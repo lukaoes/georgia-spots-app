@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import { v4 as uuid } from "uuid";
 import { db } from "../db";
 import { requireAuth, optionalAuth, AuthedRequest } from "../middleware/auth";
+import { deletePhotoFiles } from "../lib/r2";
 
 const router = Router();
 
@@ -147,9 +148,11 @@ router.get("/", (req, res) => {
 
 // GET /api/places/:id
 // GET /api/places/:id - full detail (description, all photos, all reviews).
-// Requires login server-side, not just in the UI - otherwise "log in to view details"
-// would only be a frontend suggestion, trivially bypassed by calling this URL directly.
-router.get("/:id", requireAuth, detailLimiter, (req, res) => {
+// Open to everyone now - previously this required login server-side to view the page at all,
+// but that's more restrictive than the actual goal, which is just keeping exact coordinates
+// (and the map) for registered users. Login state still comes from optionalAuth, so the
+// coordinate strip below still can't be bypassed by simply not sending a token.
+router.get("/:id", optionalAuth, detailLimiter, (req: AuthedRequest, res) => {
   const place = db.prepare("SELECT * FROM places WHERE id = ?").get(req.params.id) as any;
   if (!place) return res.status(404).json({ error: "ადგილი ვერ მოიძებნა" });
   const photos = db
@@ -168,10 +171,21 @@ router.get("/:id", requireAuth, detailLimiter, (req, res) => {
     r.photos = reviewPhotoStmt.all(r.id);
   }
   const owner = db.prepare("SELECT id, name, username, avatar_url FROM users WHERE id = ?").get(place.owner_id) as any;
+  const placeOut: any = {
+    ...rowToPlace(place),
+    owner_name: owner?.name,
+    owner_username: owner?.username,
+    owner_avatar: owner?.avatar_url,
+  };
+  if (!req.userId) {
+    delete placeOut.lat;
+    delete placeOut.lng;
+  }
   res.json({
-    place: { ...rowToPlace(place), owner_name: owner?.name, owner_username: owner?.username, owner_avatar: owner?.avatar_url },
+    place: placeOut,
     photos,
     reviews,
+    coordinates_locked: !req.userId,
   });
 });
 
@@ -294,7 +308,7 @@ router.put("/:id", requireAuth, (req: AuthedRequest, res) => {
 });
 
 // DELETE /api/places/:id/photos/:photoId - remove a single photo (owner or admin)
-router.delete("/:id/photos/:photoId", requireAuth, (req: AuthedRequest, res) => {
+router.delete("/:id/photos/:photoId", requireAuth, async (req: AuthedRequest, res) => {
   const place = db.prepare("SELECT owner_id FROM places WHERE id = ?").get(req.params.id) as any;
   if (!place) return res.status(404).json({ error: "ადგილი ვერ მოიძებნა" });
   const requester = db.prepare("SELECT is_admin FROM users WHERE id = ?").get(req.userId) as any;
@@ -302,7 +316,11 @@ router.delete("/:id/photos/:photoId", requireAuth, (req: AuthedRequest, res) => 
   if (place.owner_id !== req.userId && !isAdmin) {
     return res.status(403).json({ error: "მხოლოდ ავტორს ან ადმინისტრატორს შეუძლია წაშლა" });
   }
+  const photo = db
+    .prepare("SELECT url FROM photos WHERE id = ? AND place_id = ?")
+    .get(req.params.photoId, req.params.id) as any;
   db.prepare("DELETE FROM photos WHERE id = ? AND place_id = ?").run(req.params.photoId, req.params.id);
+  if (photo) await deletePhotoFiles([photo.url]);
   res.json({ ok: true });
 });
 
@@ -310,7 +328,7 @@ router.delete("/:id/photos/:photoId", requireAuth, (req: AuthedRequest, res) => 
 // If an owner deletes a place that's currently live (approved), it doesn't vanish immediately —
 // it's pulled from the public map and queued as a "deletion request" for an admin to confirm.
 // A place that was never public (pending/rejected/already queued) can just be removed outright.
-router.delete("/:id", requireAuth, (req: AuthedRequest, res) => {
+router.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
   const existing = db.prepare("SELECT * FROM places WHERE id = ?").get(req.params.id) as any;
   if (!existing) return res.status(404).json({ error: "ადგილი ვერ მოიძებნა" });
 
@@ -319,8 +337,24 @@ router.delete("/:id", requireAuth, (req: AuthedRequest, res) => {
   const isOwner = existing.owner_id === req.userId;
   if (!isOwner && !isAdmin) return res.status(403).json({ error: "მხოლოდ ავტორს ან ადმინისტრატორს შეუძლია წაშლა" });
 
+  // Gathered before the DELETE below, since the place/review rows (and this photo data with
+  // them) are gone the moment that cascade runs.
+  function collectPlacePhotoUrls(placeId: string): string[] {
+    const photoRows = db.prepare("SELECT url FROM photos WHERE place_id = ?").all(placeId) as any[];
+    const reviewPhotoRows = db
+      .prepare(
+        `SELECT rp.url FROM review_photos rp
+         JOIN reviews r ON r.id = rp.review_id
+         WHERE r.place_id = ?`
+      )
+      .all(placeId) as any[];
+    return [...photoRows, ...reviewPhotoRows].map((r) => r.url);
+  }
+
   if (isAdmin) {
+    const urls = collectPlacePhotoUrls(req.params.id);
     db.prepare("DELETE FROM places WHERE id = ?").run(req.params.id);
+    await deletePhotoFiles(urls);
     return res.json({ ok: true, deleted: true });
   }
 
@@ -329,7 +363,9 @@ router.delete("/:id", requireAuth, (req: AuthedRequest, res) => {
     return res.json({ ok: true, deleted: false, queued: true });
   }
 
+  const urls = collectPlacePhotoUrls(req.params.id);
   db.prepare("DELETE FROM places WHERE id = ?").run(req.params.id);
+  await deletePhotoFiles(urls);
   res.json({ ok: true, deleted: true });
 });
 
