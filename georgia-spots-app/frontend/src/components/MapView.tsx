@@ -6,7 +6,6 @@ import { pinIcon, userLocationIcon } from "./markerIcon";
 import { categoryLabel } from "../constants";
 import { CategoryIcon, Star, Layers } from "../icons";
 import { StarRating } from "./StarRating";
-import { useAuthGate } from "../AuthGate";
 
 const GEORGIA_CENTER: [number, number] = [42.15, 43.5];
 
@@ -66,7 +65,6 @@ export function MapView({
 }) {
   const [layer, setLayer] = useState<"standard" | "satellite">("standard");
   const tile = TILE_LAYERS[layer];
-  const { requireAuth } = useAuthGate();
   const navigate = useNavigate();
 
   return (
@@ -93,7 +91,7 @@ export function MapView({
                 <div className="text-xs text-[color:var(--color-ink-soft)] mb-1">{categoryLabel(p.category)}</div>
                 {p.owner_name && p.owner_username && (
                   <button
-                    onClick={() => requireAuth(() => navigate(`/users/${p.owner_username}`))}
+                    onClick={() => navigate(`/users/${p.owner_username}`)}
                     className="text-xs text-[color:var(--color-clay)] hover:underline"
                   >
                     დაამატა {p.owner_name}
@@ -110,7 +108,7 @@ export function MapView({
                   )}
                 </div>
                 <button
-                  onClick={() => requireAuth(() => navigate(`/place/${p.id}`))}
+                  onClick={() => navigate(`/place/${p.id}`)}
                   className="block w-full text-center text-xs font-medium bg-[color:var(--color-forest)] text-white rounded-md py-1.5 hover:bg-[color:var(--color-forest-dark)]"
                 >
                   დეტალურად
