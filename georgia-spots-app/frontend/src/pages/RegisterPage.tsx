@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { SEO } from "../components/SEO";
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -34,6 +35,11 @@ export function RegisterPage() {
 
   return (
     <div className="max-w-sm mx-auto mt-12 px-4 pb-12">
+      <SEO
+        title="რეგისტრაცია"
+        description="შექმენით უფასო Vanlife.Ge ანგარიში, დაამატეთ ბანაკები და გაუზიარეთ საკუთარი გამოცდილება სხვა მოგზაურებს."
+        path="/register"
+      />
       <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-1">
         რეგისტრაცია
       </h1>
