@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { categoryLabel } from "../constants";
 import { CategoryIcon } from "../icons";
 import { StarRating } from "./StarRating";
-import { useAuthGate } from "../AuthGate";
 
 interface Place {
   id: string;
@@ -17,12 +16,11 @@ interface Place {
 }
 
 export function PlaceCard({ place }: { place: Place }) {
-  const { requireAuth } = useAuthGate();
   const navigate = useNavigate();
 
   return (
     <button
-      onClick={() => requireAuth(() => navigate(`/place/${place.id}`))}
+      onClick={() => navigate(`/place/${place.id}`)}
       className="flex gap-3 text-left bg-[color:var(--color-surface)] rounded-xl border border-[color:var(--color-stone)] p-3 hover:shadow-md hover:border-[color:var(--color-moss)] transition-all"
     >
       <div className="w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-[color:var(--color-stone)] flex items-center justify-center">
