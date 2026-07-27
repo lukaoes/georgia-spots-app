@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import { categoryLabel, regionLabel } from "../constants";
 import { CategoryIcon, Flag, CircleUser, Trash2, Lock } from "../icons";
 import { CopyLinkModal } from "../components/CopyLinkModal";
+import { SEO } from "../components/SEO";
 
 type Tab = "pending" | "approved" | "rejected" | "pending_deletion" | "reports" | "users" | "reset_requests";
 
@@ -145,6 +146,7 @@ export function AdminPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
+      <SEO title="ადმინ პანელი" description="ადმინისტრირების პანელი Vanlife.Ge-სთვის." path="/admin" noindex />
       <h1 className="font-display text-2xl font-semibold text-[color:var(--color-forest)] mb-4">ადმინ პანელი</h1>
 
       <div className="flex flex-wrap gap-2 mb-6">
