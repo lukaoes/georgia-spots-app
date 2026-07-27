@@ -1,3 +1,4 @@
+{
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://api.vanlife.ge/api/:path*" },
     { "source": "/sitemap.xml", "destination": "https://api.vanlife.ge/api/sitemap.xml" },
