@@ -2,28 +2,8 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://api.vanlife.ge/api/:path*" },
     { "source": "/sitemap.xml", "destination": "https://api.vanlife.ge/api/sitemap.xml" },
-    {
-      "source": "/place/:id",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": "(?i).*(facebookexternalhit|Facebot|Twitterbot|Slackbot|WhatsApp|TelegramBot|Discordbot|LinkedInBot|Pinterest|vkShare|redditbot|Googlebot|bingbot|Applebot).*"
-        }
-      ],
-      "destination": "https://api.vanlife.ge/api/og/place/:id"
-    },
-    {
-      "source": "/users/:username",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": "(?i).*(facebookexternalhit|Facebot|Twitterbot|Slackbot|WhatsApp|TelegramBot|Discordbot|LinkedInBot|Pinterest|vkShare|redditbot|Googlebot|bingbot|Applebot).*"
-        }
-      ],
-      "destination": "https://api.vanlife.ge/api/og/profile/:username"
-    },
+    { "source": "/place/:id", "destination": "https://api.vanlife.ge/api/og/place/:id" },
+    { "source": "/users/:username", "destination": "https://api.vanlife.ge/api/og/profile/:username" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
