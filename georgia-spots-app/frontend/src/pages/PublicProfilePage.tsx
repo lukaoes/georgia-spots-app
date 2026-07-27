@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../AuthContext";
 import { PlaceCard } from "../components/PlaceCard";
+import { SEO } from "../components/SEO";
 import { CategoryIcon, CircleUser, Lock, Pencil, Link2 } from "../icons";
 import {
   InstagramIcon,
@@ -330,6 +331,17 @@ export function PublicProfilePage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
+      <SEO
+        title={`${user.name} (@${user.username})`}
+        description={
+          user.bio
+            ? user.bio.slice(0, 155)
+            : `${user.name}-ის ${places.length} დამატებული ადგილი Vanlife.Ge-ზე.`
+        }
+        path={`/users/${user.username}`}
+        image={user.avatar_url}
+        type="profile"
+      />
       <div className="flex items-start justify-between gap-3 mb-1">
         <div className="flex items-center gap-3">
           {user.avatar_url ? (
