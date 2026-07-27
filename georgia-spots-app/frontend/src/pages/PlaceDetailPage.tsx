@@ -7,6 +7,7 @@ import { useAuth } from "../AuthContext";
 import { pinIcon } from "../components/markerIcon";
 import { StarRating, StarRatingInput } from "../components/StarRating";
 import { useLightbox } from "../components/Lightbox";
+import { SEO } from "../components/SEO";
 import {
   categoryLabel,
   regionLabel,
@@ -56,15 +57,17 @@ export function PlaceDetailPage() {
   const [statusBusy, setStatusBusy] = useState(false);
 
   function load() {
-    if (!id || !user) return;
+    if (!id) return;
     api
       .getPlace(id)
       .then(setData)
       .catch((e) => setError(e.message));
-    api
-      .myStatusFor(id)
-      .then(setStatus)
-      .catch(() => {});
+    if (user) {
+      api
+        .myStatusFor(id)
+        .then(setStatus)
+        .catch(() => {});
+    }
   }
 
   useEffect(load, [id, user]);
@@ -78,36 +81,6 @@ export function PlaceDetailPage() {
       ]
     : [];
   const lightbox = useLightbox(allPhotoUrls);
-
-  if (!user) {
-    return (
-      <div className="max-w-md mx-auto mt-16 px-4 text-center">
-        <div className="w-14 h-14 rounded-full bg-[color:var(--color-surface)] border border-[color:var(--color-stone)] flex items-center justify-center mx-auto mb-4 text-[color:var(--color-forest)]">
-          <Lock size={24} />
-        </div>
-        <h1 className="font-display text-xl font-semibold text-[color:var(--color-forest)] mb-2">
-          ამ ადგილის დეტალები
-        </h1>
-        <p className="text-sm text-[color:var(--color-ink-soft)] mb-5">
-          დეტალების, ფოტოებისა და შეფასებების სანახავად საჭიროა რეგისტრაცია.
-        </p>
-        <div className="flex gap-2 justify-center">
-          <Link
-            to="/register"
-            className="bg-[color:var(--color-forest)] text-white rounded-lg px-5 py-2.5 text-sm font-medium"
-          >
-            რეგისტრაცია
-          </Link>
-          <Link
-            to="/login"
-            className="border border-[color:var(--color-stone-dark)] rounded-lg px-5 py-2.5 text-sm font-medium"
-          >
-            შესვლა
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   if (error)
     return (
@@ -126,7 +99,10 @@ export function PlaceDetailPage() {
   const isOwner = user && user.id === place.owner_id;
   const isAdmin = user?.is_admin;
   const canManage = isOwner || isAdmin;
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
+  const googleMapsUrl =
+    place.lat !== undefined && place.lng !== undefined
+      ? `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
+      : null;
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
@@ -227,8 +203,44 @@ export function PlaceDetailPage() {
     attrRows.push(["ტევადობა", `${place.capacity_estimate} მანქანა`]);
   if (place.region) attrRows.push(["რეგიონი", regionLabel(place.region)]);
 
+  const seoDescription = place.description
+    ? place.description.slice(0, 155) + (place.description.length > 155 ? "…" : "")
+    : `${categoryLabel(place.category)}${place.region ? `, ${regionLabel(place.region)}` : ""} — ვანლაივ.ჯი-ზე.`;
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length
+      : null;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Campground",
+    name: place.name,
+    description: seoDescription,
+    ...(photos[0]?.url ? { image: photos.map((p: any) => p.url) } : {}),
+    ...(place.lat !== undefined && place.lng !== undefined
+      ? { geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lng } }
+      : {}),
+    address: { "@type": "PostalAddress", addressCountry: "GE" },
+    ...(avgRating
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: avgRating.toFixed(1),
+            reviewCount: reviews.length,
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
+      <SEO
+        title={place.name}
+        description={seoDescription}
+        path={`/place/${place.id}`}
+        image={photos[0]?.url}
+        type="article"
+        structuredData={structuredData}
+      />
       <Link
         to="/"
         className="text-sm text-[color:var(--color-clay)] underline mb-3 inline-block"
@@ -296,7 +308,7 @@ export function PlaceDetailPage() {
       {place.owner_name && (
         <Link
           to={`/users/${place.owner_username}`}
-          className="text-sm text-[color:var(--color-clay)] hover:underline inline-flex items-center gap-1.5 mb-4"
+          className="text-sm text-[color:var(--color-clay)] hover:underline inline-flex items-center gap-1.5"
         >
           {place.owner_avatar ? (
             <img
@@ -309,6 +321,16 @@ export function PlaceDetailPage() {
           )}
           დაამატა {place.owner_name}
         </Link>
+      )}
+      {place.created_at && (
+        <p className="text-xs text-[color:var(--color-ink-soft)] mb-4">
+          დამატებულია{" "}
+          {new Date(place.created_at.replace(" ", "T")).toLocaleDateString("ka-GE", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </p>
       )}
 
       {user && (
@@ -406,35 +428,60 @@ export function PlaceDetailPage() {
         ))}
       </div>
 
-      <div className="rounded-xl overflow-hidden border border-[color:var(--color-stone)] h-56 mb-2">
-        <MapContainer
-          center={[place.lat, place.lng]}
-          zoom={13}
-          className="w-full h-full"
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap"
-          />
-          <Marker
-            position={[place.lat, place.lng]}
-            icon={pinIcon(place.category)}
-          />
-        </MapContainer>
-      </div>
-      <div className="flex items-center justify-between mb-6 text-xs text-[color:var(--color-ink-soft)]">
-        <span className="flex items-center gap-1">
-          <MapPin size={12} /> {place.lat.toFixed(5)}, {place.lng.toFixed(5)}
-        </span>
-        <a
-          href={googleMapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[color:var(--color-clay)] underline font-medium flex items-center gap-1"
-        >
-          <NavIcon size={12} /> გახსნა Google Maps-ში
-        </a>
-      </div>
+      {googleMapsUrl ? (
+        <>
+          <div className="rounded-xl overflow-hidden border border-[color:var(--color-stone)] h-56 mb-2">
+            <MapContainer
+              center={[place.lat, place.lng]}
+              zoom={13}
+              className="w-full h-full"
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap"
+              />
+              <Marker
+                position={[place.lat, place.lng]}
+                icon={pinIcon(place.category)}
+              />
+            </MapContainer>
+          </div>
+          <div className="flex items-center justify-between mb-6 text-xs text-[color:var(--color-ink-soft)]">
+            <span className="flex items-center gap-1">
+              <MapPin size={12} /> {place.lat.toFixed(5)}, {place.lng.toFixed(5)}
+            </span>
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[color:var(--color-clay)] underline font-medium flex items-center gap-1"
+            >
+              <NavIcon size={12} /> გახსნა Google Maps-ში
+            </a>
+          </div>
+        </>
+      ) : (
+        <div className="rounded-xl border border-dashed border-[color:var(--color-stone-dark)] h-40 mb-6 flex flex-col items-center justify-center text-center px-4 gap-2">
+          <Lock size={20} className="text-[color:var(--color-ink-soft)]" />
+          <p className="text-sm text-[color:var(--color-ink-soft)]">
+            ზუსტი კოორდინატები და რუკა ხელმისაწვდომია მხოლოდ რეგისტრირებული მომხმარებლებისთვის.
+          </p>
+          <div className="flex gap-2">
+            <Link
+              to="/register"
+              className="bg-[color:var(--color-forest)] text-white rounded-lg px-4 py-1.5 text-xs font-medium"
+            >
+              რეგისტრაცია
+            </Link>
+            <Link
+              to="/login"
+              className="border border-[color:var(--color-stone-dark)] rounded-lg px-4 py-1.5 text-xs font-medium"
+            >
+              შესვლა
+            </Link>
+          </div>
+        </div>
+      )}
 
       <h2 className="font-display text-xl font-semibold text-[color:var(--color-forest)] mb-3">
         შეფასებები ({reviews.length})
