@@ -11,9 +11,8 @@ import sharp from "sharp";
 sharp.cache(false);
 sharp.concurrency(1);
 import { v4 as uuid } from "uuid";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { requireAuth } from "../middleware/auth";
+import { R2_ENABLED, s3, uploadsDir, PutObjectCommand } from "../lib/r2";
 
 const router = Router();
 
@@ -31,33 +30,6 @@ const upload = multer({
   },
 });
 
-// If R2 credentials are configured, photos are stored there (recommended for production -
-// see backend/.env.example). Otherwise they fall back to the local uploads/ folder, which is
-// fine for local development but shouldn't be used in production: most hosts (including the
-// free tier this project is meant to run on) don't guarantee local disk survives a redeploy,
-// and its free persistent disk is small anyway - a few hundred photos at most. R2's free tier
-// is 10GB, roughly 50,000 photos at this app's compression settings.
-const R2_ENABLED = !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY && process.env.R2_BUCKET_NAME);
-
-const s3 = R2_ENABLED
-  ? new S3Client({
-      region: "auto",
-      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-      },
-      // Without an explicit timeout, a slow or unreachable R2 endpoint can hang well past
-      // whatever timeout the hosting platform's own proxy enforces - the request then dies
-      // at the proxy layer with a generic network error client-side ("Load failed" in Safari)
-      // instead of a clear message. Failing fast here means the app always controls the error.
-      requestHandler: new NodeHttpHandler({ connectionTimeout: 5000, socketTimeout: 15000 }),
-      maxAttempts: 2,
-    })
-  : null;
-
-const uploadsDir = path.join(__dirname, "..", "..", "uploads");
-
 // Small text watermark in the bottom-right corner, so a saved/scraped photo still points back
 // to the site. Built as an SVG and composited with sharp rather than using a static image file,
 // so it scales cleanly with photos of any size and needs no extra asset to ship.
@@ -74,7 +46,7 @@ function watermarkSvg(width: number, height: number) {
   const y = height - margin;
   return Buffer.from(`
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <text x="${x}" y="${y}" text-anchor="end" font-family="sans-serif" font-weight="600"
+      <text x="${x}" y="${y}" text-anchor="end" font-family="DejaVu Sans, sans-serif" font-weight="600"
             font-size="${fontSize}" fill="rgba(255,255,255,0.82)"
             stroke="rgba(0,0,0,0.55)" stroke-width="${Math.max(1, fontSize * 0.06)}"
             paint-order="stroke">${WATERMARK_TEXT}</text>
