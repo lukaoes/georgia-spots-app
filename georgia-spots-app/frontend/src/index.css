@@ -58,8 +58,8 @@ h1, h2, h3, .font-display {
    100dvh accounts for the real visible viewport; the plain vh rule is just a fallback for
    older browsers that don't support dvh yet. */
 .app-shell-height {
-  height: calc(100vh - 57px);
-  height: calc(100dvh - 57px);
+  height: calc(100vh - 78px);
+  height: calc(100dvh - 78px);
 }
 .contour-divider {
   height: 18px;
