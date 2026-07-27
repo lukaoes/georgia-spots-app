@@ -10,6 +10,7 @@ import uploadsRoutes from "./routes/uploads";
 import usersRoutes from "./routes/users";
 import adminRoutes from "./routes/admin";
 import sitemapRoutes from "./routes/sitemap";
+import ogRoutes from "./routes/og";
 import "./db"; // ensures schema is created on boot
 
 const app = express();
@@ -58,6 +59,7 @@ app.use("/api/uploads", uploadsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api", sitemapRoutes);
+app.use("/api", ogRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
