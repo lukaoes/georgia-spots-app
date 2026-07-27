@@ -44,9 +44,24 @@ function ogPage(opts: { title: string; description: string; image: string; url: 
 </html>`;
 }
 
-function siteBase(req: any): string {
+function siteBase(_req: any): string {
   const configured = process.env.FRONTEND_ORIGIN?.split(",")[0]?.trim();
-  return configured || `${req.protocol}://${req.get("host")}`;
+  // NOTE: this must never fall back to the *API's* own host (req.protocol/req.get("host")) -
+  // these routes live on api.vanlife.ge, but og:url/canonical need to point at the frontend
+  // (vanlife.ge). Falling back to the request's own host silently produced links like
+  // "https://api.vanlife.ge/place/xxx" whenever FRONTEND_ORIGIN wasn't set, which is a broken
+  // page. If FRONTEND_ORIGIN isn't configured, hardcode the known production frontend instead.
+  return configured || "https://vanlife.ge";
+}
+
+// Photo/avatar URLs are absolute when stored in R2 (https://<bucket>.../file.webp) but relative
+// when the app falls back to local disk storage (just "/uploads/file.webp" - see backend/src/
+// routes/uploads.ts). A relative path in <meta property="og:image"> isn't valid - scrapers like
+// Facebook's need a fully-qualified URL and will error out on the page instead of just skipping
+// the image, so every relative image URL must be resolved against the site's base first.
+function absolutizeUrl(url: string, base: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 router.get("/og/place/:id", (req, res) => {
@@ -73,7 +88,7 @@ router.get("/og/place/:id", (req, res) => {
     ogPage({
       title: place.name,
       description,
-      image: cover?.url || `${base}/og-default.png`,
+      image: cover?.url ? absolutizeUrl(cover.url, base) : `${base}/og-default.png`,
       url: `${base}/place/${place.id}`,
       siteName: "Vanlife.Ge",
     })
@@ -100,7 +115,7 @@ router.get("/og/profile/:username", (req, res) => {
     ogPage({
       title: `${user.name} (@${user.username})`,
       description: user.bio ? user.bio.slice(0, 155) : `${user.name}-ის ${placeCount} დამატებული ადგილი Vanlife.Ge-ზე.`,
-      image: user.avatar_url || `${base}/og-default.png`,
+      image: user.avatar_url ? absolutizeUrl(user.avatar_url, base) : `${base}/og-default.png`,
       url: `${base}/users/${user.username}`,
       siteName: "Vanlife.Ge",
     })
