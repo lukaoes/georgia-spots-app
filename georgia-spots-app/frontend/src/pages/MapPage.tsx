@@ -4,6 +4,7 @@ import { MapView } from "../components/MapView";
 import { FilterPanel } from "../components/FilterPanel";
 import type { Filters } from "../components/FilterPanel";
 import { PlaceCard } from "../components/PlaceCard";
+import { SEO } from "../components/SEO";
 import { Settings, Navigation, MapIcon, ListIcon, X } from "../icons";
 
 export function MapPage() {
@@ -38,6 +39,11 @@ export function MapPage() {
 
   return (
     <div className="flex flex-col app-shell-height">
+      <SEO
+        title="Vanlife.Ge — ბანაკები და სადგომები საქართველოში"
+        description="იპოვეთ საუკეთესო ველური და ორგანიზებული ბანაკები, ღამის გასათევი ადგილები და სადგომები ავტოსახლებისა და კარვებისთვის საქართველოში. რუკაზე ნავიგაცია, ფილტრები და რეალური მომხმარებლების შეფასებები."
+        path="/"
+      />
       <div className="flex flex-wrap items-center gap-2 gap-y-2 px-3 sm:px-4 py-2 border-b border-[color:var(--color-stone)] bg-[color:var(--color-surface)]">
         <button
           onClick={() => setShowFilters((s) => !s)}
