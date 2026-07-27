@@ -4,8 +4,45 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#3D3C9D" />
+
     <title>Vanlife.Ge — ბანაკები და სადგომები საქართველოში</title>
-    <meta name="description" content="ბანაკები, სადგომები და ღამის გასათევი ადგილები ავტოსახლებისა და კარვებისთვის საქართველოში." />
+    <meta name="description" content="იპოვეთ საუკეთესო ბანაკები, ღამის გასათევი ადგილები და სადგომები ავტოსახლებისა და კარვებისთვის საქართველოში. რუკაზე ნავიგაცია, ფილტრები და რეალური მომხმარებლების შეფასებები." />
+
+    <!--
+      These OG/Twitter tags are what social-media link-preview scrapers (Facebook, X/Twitter,
+      WhatsApp, Slack, etc.) and any crawler that doesn't execute JavaScript actually see - they
+      read the raw HTML response, not the per-page tags react-helmet-async sets after JS runs.
+      Google's own crawler does render JS and picks up the per-page versions from each page
+      component instead. Keep these accurate as a sensible default for the homepage/shares of
+      pages a bot can't render.
+    -->
+    <meta property="og:site_name" content="Vanlife.Ge" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Vanlife.Ge — ბანაკები და სადგომები საქართველოში" />
+    <meta property="og:description" content="იპოვეთ საუკეთესო ბანაკები, ღამის გასათევი ადგილები და სადგომები ავტოსახლებისა და კარვებისთვის საქართველოში." />
+    <meta property="og:image" content="/og-default.png" />
+    <meta property="og:locale" content="ka_GE" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vanlife.Ge — ბანაკები და სადგომები საქართველოში" />
+    <meta name="twitter:description" content="იპოვეთ საუკეთესო ბანაკები, ღამის გასათევი ადგილები და სადგომები ავტოსახლებისა და კარვებისთვის საქართველოში." />
+    <meta name="twitter:image" content="/og-default.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Vanlife.Ge",
+        "url": "https://vanlife.ge",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://vanlife.ge/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
