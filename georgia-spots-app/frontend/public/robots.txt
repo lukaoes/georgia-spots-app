@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /add
+Disallow: /edit/
+Disallow: /reset-password/
+
+Sitemap: https://vanlife.ge/sitemap.xml
