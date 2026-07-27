@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./AuthContext";
 import { AuthGateProvider } from "./AuthGate";
 import { Header } from "./components/Header";
@@ -14,26 +15,28 @@ import { AdminPage } from "./pages/AdminPage";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AuthGateProvider>
-          <div className="min-h-screen bg-[color:var(--color-bg)]">
-            <Header />
-            <Routes>
-              <Route path="/" element={<MapPage />} />
-              <Route path="/place/:id" element={<PlaceDetailPage />} />
-              <Route path="/add" element={<AddPlacePage />} />
-              <Route path="/edit/:id" element={<AddPlacePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/users/:username" element={<PublicProfilePage />} />
-              <Route path="/admin" element={<AdminPage />} />
-            </Routes>
-          </div>
-        </AuthGateProvider>
-      </BrowserRouter>
-    </AuthProvider>
+    <HelmetProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AuthGateProvider>
+            <div className="min-h-screen bg-[color:var(--color-bg)]">
+              <Header />
+              <Routes>
+                <Route path="/" element={<MapPage />} />
+                <Route path="/place/:id" element={<PlaceDetailPage />} />
+                <Route path="/add" element={<AddPlacePage />} />
+                <Route path="/edit/:id" element={<AddPlacePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/users/:username" element={<PublicProfilePage />} />
+                <Route path="/admin" element={<AdminPage />} />
+              </Routes>
+            </div>
+          </AuthGateProvider>
+        </BrowserRouter>
+      </AuthProvider>
+    </HelmetProvider>
   );
 }
